@@ -15,6 +15,7 @@ SOURCE_URL = 'https://raw.githubusercontent.com/erre1998/lectures-that-link/v0.8
 OUTPUT = ROOT / 'data' / 'lectures.json'
 XML_OUTPUT = ROOT / 'data' / 'dh-lecture-series.xml'
 T = '{http://www.tei-c.org/ns/1.0}'
+XML_LANG = '{http://www.w3.org/XML/1998/namespace}lang'
 XML_ID = '{http://www.w3.org/XML/1998/namespace}id'
 
 
@@ -28,6 +29,141 @@ def content(element: ET.Element | None) -> str:
 
 def refs(value: str | None) -> list[str]:
     return [value.lstrip('#') for value in (value or '').split()]
+
+
+def unique(values):
+    """Preserve source order while removing duplicate scalar values."""
+    return list(dict.fromkeys(values))
+
+
+def tokens(values):
+    return unique(token for value in values for token in (value or '').split())
+
+
+def local_ids(values):
+    """Match XSLT: only nonempty local fragment references are IDs."""
+    return unique(token[1:] for token in tokens(values)
+                  if token.startswith('#') and len(token) > 1)
+
+
+def source_text(element):
+    """XPath string-value with XML whitespace normalization."""
+    return re.sub(r'[ \t\r\n]+', ' ', ''.join(element.itertext())).strip(' \t\r\n')
+
+
+def register(elements):
+    return {e.get(XML_ID): e for e in elements if e.get(XML_ID)}
+
+
+def entity(ident, registry, name):
+    node = registry.get(ident)
+    return {'id': ident, 'label': name(node) or ident if node is not None else ident,
+            'resolved': node is not None}
+
+
+def node_name(node):
+    return content(node.find(f'{T}name'))
+
+
+def references(elements):
+    return tokens(e.get('corresp') for e in elements)
+
+
+def format_values(lecture, kind):
+    # Preserve the recorded values; no inferred delivery/audience format.
+    return unique(''.join(e.itertext()) for e in lecture.iter(f'{T}term')
+                  if e.get('type') == kind)
+
+
+def abstract_entries(lecture):
+    entries = []
+    for note in lecture.findall(f'{T}note[@type="abstract"]'):
+        text = content(note)
+        status = 'empty' if not text else 'not-found' if text.casefold() == 'not found' else 'available'
+        entries.append({'language': note.get(XML_LANG), 'text': text if status == 'available' else '',
+                        'status': status})
+    return entries
+
+
+def resource_entries(*scopes):
+    """Keep resource provenance: lecture, term, or series."""
+    entries = []
+    seen = set()
+    for scope, element in scopes:
+        for ptr in element.findall(f'{T}ptr'):
+            kind, url = ptr.get('type', ''), ptr.get('target', '')
+            key = (scope, kind, url)
+            if url.startswith(('https://', 'http://')) and key not in seen:
+                seen.add(key)
+                entries.append({'scope': scope, 'type': kind, 'url': url})
+    return entries
+
+
+def geography(place_ids, places):
+    """Resolve recorded places and countries, without geocoding or inference."""
+    cities = [i for i in place_ids if i in places and places[i].get('type') == 'city']
+    country_refs = unique([i for i in place_ids if i in places and places[i].get('type') == 'country'] +
+                          local_ids(c.get('corresp') for i in cities for c in places[i].findall(f'{T}country')))
+    countries = [i for i in country_refs if i in places and places[i].get('type') == 'country']
+    return {
+        'places': [dict(entity(i, places, node_name),
+                        type=places[i].get('type') if i in places else None) for i in place_ids],
+        'cities': [entity(i, places, node_name) for i in cities],
+        'countries': [entity(i, places, node_name) for i in countries],
+        'unresolvedOrInvalidCountryIds': [i for i in country_refs if i not in countries],
+    }
+
+
+def institution_entry(ident, orgs, places):
+    org = orgs.get(ident)
+    place_refs = references(org.findall(f'{T}place')) if org is not None else []
+    return dict(entity(ident, orgs, node_name),
+                type=org.get('type') if org is not None else None,
+                placeReferences=place_refs,
+                geography=geography(local_ids(place_refs), places))
+
+
+def lecture_metadata(lecture, term, series, persons, orgs, places, taxonomy):
+    speaker_nodes = [p for p in lecture.iter(f'{T}person') if p.get('role') == 'speaker']
+    speaker_refs = references(speaker_nodes)
+    speaker_ids = local_ids(speaker_refs)
+    affiliation_refs = references(list(lecture.iter(f'{T}affiliation')))
+    affiliation_ids = local_ids(affiliation_refs)
+    discipline_refs = references([n for n in lecture.iter(f'{T}term') if n.get('type') == 'discipline'])
+    discipline_ids = local_ids(discipline_refs)
+    host_refs = references(lecture.findall(f'{T}org[@role="host-institution"]'))
+    host_place_refs = tokens([series.get('where')])
+    affiliation_places = local_ids(
+        p.get('corresp') for i in affiliation_ids if i in orgs for p in orgs[i].findall(f'{T}place'))
+    title = lecture.find(f'{T}eventName')
+    topics = unique(topic for n in lecture.iter(f'{T}term') if n.get('type') == 'topics-llm'
+                    for part in source_text(n).split(',')
+                    if (topic := re.sub(r'[ \t\r\n]+', ' ', part).strip(' \t\r\n').lower()))
+    abstracts = abstract_entries(lecture)
+    return {
+        'titleLanguage': title.get(XML_LANG) if title is not None else None,
+        'abstracts': abstracts,
+        'hasAbstract': any(a['status'] == 'available' for a in abstracts),
+        'speakerReferences': speaker_refs,
+        'speakerDetails': [dict(entity(i, persons, name_of),
+                                genders=unique(''.join(g.itertext()) for g in persons[i].findall(f'{T}gender')) if i in persons else [],
+                                affiliationIds=local_ids(a.get('corresp') for p in speaker_nodes
+                                    if i in local_ids([p.get('corresp')]) for a in p.iter(f'{T}affiliation')))
+                           for i in speaker_ids],
+        'affiliationReferences': affiliation_refs,
+        'affiliations': [institution_entry(i, orgs, places) for i in affiliation_ids],
+        'hostInstitutionReferences': host_refs,
+        'hostInstitutions': [institution_entry(i, orgs, places) for i in local_ids(host_refs)],
+        'hostPlaceReferences': host_place_refs,
+        'hostGeography': geography(local_ids(host_place_refs), places),
+        'affiliationGeography': geography(affiliation_places, places),
+        'disciplineReferences': discipline_refs,
+        'disciplineDetails': [entity(i, taxonomy, lambda n: content(n.find(f'{T}catDesc/{T}name'))) for i in discipline_ids],
+        'topics': topics,
+        'deliveryFormats': format_values(lecture, 'speech'),
+        'audienceFormats': format_values(lecture, 'audience'),
+        'resources': resource_entries(('lecture', lecture), ('term', term), ('series', series)),
+    }
 
 
 def name_of(person: ET.Element) -> str:
@@ -69,6 +205,11 @@ def main() -> None:
         for cat in root.findall(f'./{T}teiHeader/{T}encodingDesc/{T}classDecl//{T}category')
         if cat.get(XML_ID)
     }
+    # Registers for the detailed, ID-based export.
+    person_nodes = register(root.findall(f'./{T}teiHeader/{T}profileDesc/{T}particDesc//{T}person'))
+    org_nodes = register(root.findall(f'./{T}teiHeader/{T}profileDesc/{T}particDesc//{T}org'))
+    place_nodes = register(root.findall(f'.//{T}settingDesc//{T}place'))
+    taxonomy = register(root.findall(f'.//{T}taxonomy[@{XML_ID}="disciplines"]/{T}category'))
     lecture_series = root.findall(f'.//{T}event[@type="lecture-series"]')
     series = []
     lectures = []
@@ -125,12 +266,14 @@ def main() -> None:
                     'mode': content(mode_el),
                     'abstract': content(lecture.find(f'{T}note[@type="abstract"]')),
                     'programme': program_link,
+                    **lecture_metadata(lecture, term, s, person_nodes, org_nodes, place_nodes, taxonomy),
                 })
         series.append({'id': series_id, 'name': series_name, 'terms': len(terms), 'lectures': series_count})
 
     lectures.sort(key=lambda x: (x['date'], x['id']), reverse=True)
     series.sort(key=lambda x: x['name'].casefold())
     payload = {
+        'schemaVersion': 2,
         'dataset': 'Lectures that Link',
         'version': version,
         'source': SOURCE_URL,
@@ -138,6 +281,10 @@ def main() -> None:
         'series': series,
         'lectures': lectures,
     }
+    # Unique record IDs are required for the future detail view.
+    lecture_ids = [lecture['id'] for lecture in lectures]
+    if not all(lecture_ids) or len(set(lecture_ids)) != len(lecture_ids):
+        raise ValueError('Missing or duplicate lecture IDs.')
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(payload, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
     print(f'Export: {len(lectures)} lectures, {len(series)} series, version: {version}')
