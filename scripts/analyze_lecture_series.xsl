@@ -2,7 +2,8 @@
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:xs="http://www.w3.org/2001/XMLSchema"
   xmlns:math="http://www.w3.org/2005/xpath-functions/math"
-  exclude-result-prefixes="xs math" xmlns:local="local"
+  xmlns:map="http://www.w3.org/2005/xpath-functions/map"
+  exclude-result-prefixes="xs math map" xmlns:local="local"
   xpath-default-namespace="http://www.tei-c.org/ns/1.0"
   version="3.0">
   
@@ -42,6 +43,12 @@
       Missing, unclassified and unresolved speaker metadata are reported
       separately. Canceled records are included; undated records are
       excluded from annual counts, as in the other annual analyses.
+    - Institutional affiliations: lecture-level counts and shares per series
+      and for the entire corpus, using the six original institution types.
+      Each type is counted at most once per lecture; categories can overlap.
+      Denominator: all recorded lectures, including canceled records.
+      Empty series have null shares; missing, unresolved and unclassified
+      affiliations are reported separately. No affiliation is inferred.
     - Other legacy analyses are retained but not executed by default.
   -->
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
@@ -230,6 +237,76 @@
     </xsl:for-each>
   </xsl:function>
 
+  <!-- JSON successor to ls-institution-types-plot. -->
+  <xsl:variable name="institution-types" as="xs:string+"
+    select="('university', 'research_institution', 'glam',
+             'company', 'other', 'self-employment')"/>
+
+  <xsl:function name="local:lecture-institution-record" as="map(*)">
+    <xsl:param name="lecture" as="element()"/>
+    <xsl:variable name="ids" as="xs:string*"
+      select="distinct-values(
+        (for $ref in $lecture//affiliation/@corresp
+         return tokenize(normalize-space($ref), '\s+'))
+        [starts-with(., '#') and string-length(.) gt 1]
+        ! substring(., 2))"/>
+    <xsl:variable name="registered" select="$institutions[@xml:id = $ids]"/>
+    <xsl:variable name="types" as="xs:string*"
+      select="distinct-values($registered/@type[. = $institution-types] ! string(.))"/>
+    <xsl:sequence select="map {
+      'seriesId': string($lecture/ancestor::event[@type='lecture-series'][1]/@xml:id),
+      'types': $types,
+      'withoutAffiliationId': empty($ids),
+      'unresolvedAffiliation': exists($ids[not(. = $registered/@xml:id)]),
+      'unknownInstitutionType': exists($registered[not(@type = $institution-types)]),
+      'withoutKnownType': empty($types),
+      'multipleInstitutionTypes': count($types) gt 1
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:institution-type-summary" as="map(*)">
+    <xsl:param name="records" as="map(*)*"/>
+    <xsl:variable name="total" select="count($records)"/>
+    <xsl:sequence select="map {
+      'total': $total,
+      'types': array {
+        for $type in $institution-types
+        return map {
+          'type': $type,
+          'lectures': count($records[?types = $type]),
+          'share': if ($total gt 0)
+                   then count($records[?types = $type]) div $total
+                   else ()
+        }
+      },
+      'withoutAffiliationId': count($records[?withoutAffiliationId]),
+      'unresolvedAffiliation': count($records[?unresolvedAffiliation]),
+      'unknownInstitutionType': count($records[?unknownInstitutionType]),
+      'withoutKnownType': count($records[?withoutKnownType]),
+      'multipleInstitutionTypes': count($records[?multipleInstitutionTypes])
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:institution-type-analysis" as="map(*)">
+    <xsl:param name="series" as="element()*"/>
+    <xsl:param name="lectures" as="element()*"/>
+    <xsl:variable name="records" as="map(*)*"
+      select="$lectures ! local:lecture-institution-record(.)"/>
+    <xsl:sequence select="map {
+      'overall': local:institution-type-summary($records),
+      'perSeries': array {
+        for $s in $series
+        return map:merge((
+          map {
+            'seriesId': string($s/@xml:id),
+            'seriesName': normalize-space(string(($s/eventName[@xml:lang='en'], $s/eventName)[1]))
+          },
+          local:institution-type-summary($records[?seriesId = string($s/@xml:id)])
+        ))
+      }
+    }"/>
+  </xsl:function>
+
   <xsl:template match="/">
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
@@ -249,7 +326,8 @@
       'audiencePerYear': array { $annual-audience },
       'seriesStructure': local:series-structure($lecture-series, $lecture-terms),
       'speakerAnalysis': local:speaker-analysis($lectures),
-      'genderPerYear': array { local:gender-per-year($lectures) }
+      'genderPerYear': array { local:gender-per-year($lectures) },
+      'institutionTypeAnalysis': local:institution-type-analysis($lecture-series, $lectures)
     }"/>
   </xsl:template>
   
