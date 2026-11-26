@@ -31,9 +31,12 @@
     - Series structure exported as per-series and per-term counts and
       frequency distributions. All recorded terms and lectures are included,
       including canceled records; counts of zero are retained if present.
+    - Speaker frequency exported by local TEI person ID. Each speaker is
+      counted once per lecture record, including canceled records. Multiple
+      references are tokenized; unresolved local IDs are retained and flagged.
+      Records without a usable local speaker ID are counted separately.
     - Other legacy analyses are retained but not executed by default.
   -->
-  
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
 
   <xsl:variable name="lecture-series" select="//event[@type='lecture-series']"/>
@@ -134,6 +137,49 @@
     }"/>
   </xsl:function>
 
+  <!-- JSON successor to lectures-per-speaker. Count each referenced person
+       once per lecture record, including canceled records. -->
+  <xsl:function name="local:speaker-ids" as="xs:string*">
+    <xsl:param name="lecture" as="element()"/>
+    <xsl:sequence select="distinct-values(
+      (for $ref in $lecture//person[@role='speaker']/@corresp
+       return tokenize(normalize-space($ref), '\s+'))
+      [starts-with(., '#') and string-length(.) gt 1]
+      ! substring(., 2))"/>
+  </xsl:function>
+
+  <xsl:function name="local:speaker-analysis" as="map(*)">
+    <xsl:param name="records" as="element()*"/>
+    <xsl:variable name="speaker-counts" as="map(*)*">
+      <xsl:for-each-group select="$records" group-by="local:speaker-ids(.)">
+        <xsl:sort select="count(current-group())" data-type="number" order="descending"/>
+        <xsl:sort select="current-grouping-key()"/>
+        <xsl:variable name="id" select="current-grouping-key()"/>
+        <xsl:variable name="person" select="$persons[@xml:id = $id]"/>
+        <xsl:sequence select="map {
+          'speakerId': $id,
+          'speakerName': normalize-space(string-join(($person//forename, $person//surname), ' ')),
+          'registered': exists($person),
+          'lectures': count(current-group())
+        }"/>
+      </xsl:for-each-group>
+    </xsl:variable>
+    <xsl:sequence select="map {
+      'uniqueSpeakers': count($speaker-counts),
+      'speakerLectureAssignments': sum($speaker-counts?lectures),
+      'unresolvedSpeakerIds': count($speaker-counts[not(?registered)]),
+      'lecturesWithoutSpeakerId': count($records[empty(local:speaker-ids(.))]),
+      'lecturesPerSpeaker': array { $speaker-counts },
+      'lecturesPerSpeakerDistribution': array {
+        for $n in sort(distinct-values($speaker-counts?lectures))
+        return map {
+          'lectures': $n,
+          'speakers': count($speaker-counts[?lectures = $n])
+        }
+      }
+    }"/>
+  </xsl:function>
+
   <xsl:template match="/">
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
@@ -151,7 +197,8 @@
       'undatedLectures': count($lectures[not(matches(@when, '^[0-9]{4}'))]),
       'lecturesPerYear': array { $annual },
       'audiencePerYear': array { $annual-audience },
-      'seriesStructure': local:series-structure($lecture-series, $lecture-terms)
+      'seriesStructure': local:series-structure($lecture-series, $lecture-terms),
+      'speakerAnalysis': local:speaker-analysis($lectures)
     }"/>
   </xsl:template>
   
