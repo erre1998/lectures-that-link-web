@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lectures that Link</title>
+    <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -13,20 +14,26 @@
     </header>
     
     <main id="main-content">
-      <h2>Overview</h2>
-      
-      <p id="status" role="status">Loading data…</p>
-      
-      <dl>
-        <dt>Lecture series</dt>
-        <dd id="count-series">–</dd>
+      <section aria-labelledby="overview-heading">
+        <h2 id="overview-heading">Overview</h2>
         
-        <dt>Terms</dt>
-        <dd id="count-terms">–</dd>
+        <p id="status" role="status">Loading data…</p>
         
-        <dt>Lectures</dt>
-        <dd id="count-lectures">–</dd>
-      </dl>
+        <dl class="statistics">
+          <div>
+            <dt>Lecture series</dt>
+            <dd id="count-series">–</dd>
+          </div>
+          <div>
+            <dt>Terms</dt>
+            <dd id="count-terms">–</dd>
+          </div>
+          <div>
+            <dt>Lectures</dt>
+            <dd id="count-lectures">–</dd>
+          </div>
+        </dl>
+      </section>
     </main>
   </body>
 </html>
