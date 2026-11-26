@@ -1,3 +1,4 @@
+
 name: Build and deploy Lectures that Link
 
 on:
@@ -21,14 +22,41 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Saxon-HE 11.4
+        run: |
+          curl -fL \
+            https://downloads.saxonica.com/SaxonJ/HE/11/SaxonHE11-4J.zip \
+            -o "$RUNNER_TEMP/saxon.zip"
+
+          unzip -q "$RUNNER_TEMP/saxon.zip" \
+            -d "$RUNNER_TEMP/saxon"
+
       - name: Generate dataset
         run: python build.py
 
+      - name: Run XSLT analyses
+        run: |
+          java -jar "$RUNNER_TEMP/saxon/saxon-he-11.4.jar" \
+            -s:data/dh-lecture-series.xml \
+            -xsl:scripts/analyze_lecture_series.xsl \
+            -o:data/analyses.json
+
+      - name: Validate JSON files
+        run: |
+          python -m json.tool data/lectures.json > /dev/null
+          python -m json.tool data/analyses.json > /dev/null
+
       - name: Prepare website
         run: |
-          mkdir -p _site
+          mkdir -p _site/data
           cp index.html app.js style.css _site/
-          cp -r data _site/
+          cp data/lectures.json data/analyses.json _site/data/
 
       - name: Upload website
         uses: actions/upload-pages-artifact@v4
