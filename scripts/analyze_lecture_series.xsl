@@ -64,6 +64,14 @@
       are resolved; virtual hosts and missing geography remain unclassified.
       Shares use all recorded lectures, including canceled records; empty
       series have null shares. Data quality indicators are not exclusive.
+    - LLM-generated topics: split comma-separated terms, normalize whitespace
+      and case, count each topic once per lecture. Export observed keywords
+      and the four original thematic areas for the corpus and each series.
+      Area matching uses word boundaries instead of substring matching to
+      avoid false positives (e.g. ai in training). Areas may overlap and
+      are heuristic, not a controlled taxonomy. Shares use all lectures,
+      including canceled records; empty series have null shares. Missing
+      topics are reported separately. No new LLM annotations are generated.
     - Other legacy analyses are retained but not executed by default.
   -->
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
@@ -513,6 +521,92 @@
     }"/>
   </xsl:function>
 
+  <!-- JSON successors to llm-topic-analysis and llm-topic-csv. -->
+  <xsl:variable name="topic-areas" as="map(*)+" select="(
+    map {'id': 'digitizationAndCulturalHeritage',
+         'label': 'Digitization and cultural heritage',
+         'pattern': 'cultural heritage|digitization'},
+    map {'id': 'digitalEdition', 'label': 'Digital edition',
+         'pattern': 'edition|editing|editorial'},
+    map {'id': 'analysis', 'label': 'Analysis', 'pattern': 'analysis'},
+    map {'id': 'artificialIntelligence', 'label': 'Artificial intelligence',
+         'pattern': 'machine learning|ai|artificial intelligence|llm'}
+  )"/>
+
+  <xsl:function name="local:lecture-topic-record" as="map(*)">
+    <xsl:param name="lecture" as="element()"/>
+    <xsl:variable name="topics" as="xs:string*" select="distinct-values(
+      (for $term in $lecture//term[@type='topics-llm']
+       return tokenize(normalize-space(string($term)), ',')
+         ! lower-case(normalize-space(.)))[. != ''])"/>
+    <xsl:variable name="areas" as="xs:string*" select="
+      for $area in $topic-areas
+      return if (some $topic in $topics satisfies
+        matches($topic, concat('(^|[^\p{L}\p{N}])(', $area?pattern,
+          ')([^\p{L}\p{N}]|$)')))
+        then $area?id else ()"/>
+    <xsl:sequence select="map {
+      'seriesId': string($lecture/ancestor::event[@type='lecture-series'][1]/@xml:id),
+      'topics': $topics,
+      'areas': $areas
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:topic-summary" as="map(*)">
+    <xsl:param name="records" as="map(*)*"/>
+    <xsl:variable name="total" select="count($records)"/>
+    <xsl:variable name="keywords" as="map(*)*">
+      <xsl:for-each-group select="$records?topics" group-by=".">
+        <xsl:sort select="count(current-group())" data-type="number" order="descending"/>
+        <xsl:sort select="current-grouping-key()"/>
+        <xsl:variable name="count" select="count(current-group())"/>
+        <xsl:sequence select="map {
+          'topic': current-grouping-key(),
+          'lectures': $count,
+          'share': if ($total gt 0) then $count div $total else ()
+        }"/>
+      </xsl:for-each-group>
+    </xsl:variable>
+    <xsl:sequence select="map {
+      'total': $total,
+      'withTopics': count($records[exists(?topics)]),
+      'withoutTopics': count($records[empty(?topics)]),
+      'distinctTopics': count($keywords),
+      'topicAssignments': count($records?topics),
+      'withoutTopicArea': count($records[empty(?areas)]),
+      'multipleTopicAreas': count($records[count(?areas) gt 1]),
+      'topics': array { $keywords },
+      'topicAreas': array {
+        for $area in $topic-areas
+        return map {
+          'id': $area?id,
+          'label': $area?label,
+          'lectures': count($records[?areas = $area?id]),
+          'share': if ($total gt 0) then count($records[?areas = $area?id]) div $total else ()
+        }
+      }
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:topic-analysis" as="map(*)">
+    <xsl:param name="series" as="element()*"/>
+    <xsl:param name="lectures" as="element()*"/>
+    <xsl:variable name="records" as="map(*)*" select="$lectures ! local:lecture-topic-record(.)"/>
+    <xsl:sequence select="map {
+      'overall': local:topic-summary($records),
+      'perSeries': array {
+        for $s in $series
+        return map:merge((
+          map {
+            'seriesId': string($s/@xml:id),
+            'seriesName': normalize-space(string(($s/eventName[@xml:lang='en'], $s/eventName)[1]))
+          },
+          local:topic-summary($records[?seriesId = string($s/@xml:id)])
+        ))
+      }
+    }"/>
+  </xsl:function>
+
   <xsl:template match="/">
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
@@ -535,7 +629,8 @@
       'genderPerYear': array { local:gender-per-year($lectures) },
       'institutionTypeAnalysis': local:institution-type-analysis($lecture-series, $lectures),
       'disciplineAnalysis': local:discipline-analysis($lecture-series, $lectures),
-      'geographicalAnalysis': local:geographical-analysis($lecture-series, $lectures)
+      'geographicalAnalysis': local:geographical-analysis($lecture-series, $lectures),
+      'topicAnalysis': local:topic-analysis($lecture-series, $lectures)
     }"/>
   </xsl:template>
   
