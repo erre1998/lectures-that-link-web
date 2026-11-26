@@ -246,6 +246,46 @@
           <p class="analysis-note">These counts refer to lecture records. Flags may overlap with each other and with known types.</p>
         </details>
       </section>
+      <section aria-labelledby="discipline-heading">
+        <h2 id="discipline-heading">Disciplinary distribution</h2>
+        <label for="discipline-series">Lecture series</label>
+        <select id="discipline-series" disabled>
+          <option value="all">All lecture series</option>
+        </select>
+        <label><input type="checkbox" id="discipline-show-zero" disabled> Show disciplines with zero records</label>
+        <p id="discipline-total" role="status">Lecture records: –</p>
+        <div class="table-container" role="region" aria-labelledby="discipline-heading" tabindex="0">
+          <table aria-describedby="discipline-note">
+            <caption>Lecture records by annotated discipline</caption>
+            <thead><tr>
+              <th scope="col">Discipline</th>
+              <th scope="col">Lecture records</th>
+              <th scope="col">Share</th>
+            </tr></thead>
+            <tbody id="discipline-table"></tbody>
+          </table>
+        </div>
+        <p id="discipline-note" class="analysis-note">Each resolved discipline is counted at most once per lecture record. Shares use all lecture records in the selected scope, including canceled records. Categories may overlap. Zero counts are hidden by default.</p>
+        <details>
+          <summary>Data quality and multiple assignments</summary>
+          <dl class="statistics">
+            <div><dt>No usable local discipline ID</dt><dd id="discipline-no-id">–</dd></div>
+            <div><dt>Unresolved discipline ID</dt><dd id="discipline-unresolved">–</dd></div>
+            <div><dt>Invalid discipline reference</dt><dd id="discipline-invalid">–</dd></div>
+            <div><dt>No known discipline</dt><dd id="discipline-no-known">–</dd></div>
+            <div><dt>Multiple known disciplines</dt><dd id="discipline-multiple">–</dd></div>
+          </dl>
+          <p class="analysis-note">Quality flags may overlap. Unresolved IDs are preserved as recorded, not assigned to known categories.</p>
+          <p id="discipline-unresolved-empty" hidden>No unresolved discipline IDs in this selection.</p>
+          <div id="discipline-unresolved-region" class="table-container" role="region" aria-label="Unresolved discipline IDs" tabindex="0">
+            <table>
+              <caption>Unresolved discipline IDs</caption>
+              <thead><tr><th scope="col">ID</th><th scope="col">Lecture records</th></tr></thead>
+              <tbody id="discipline-unresolved-table"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
     </main>
   </body>
 </html>

@@ -51,7 +51,6 @@ function renderTable(id, entries, headingField, fields) {
         }
         rows.appendChild(row);
     }
-
     tbody.replaceChildren(rows);
 }
 
@@ -97,7 +96,6 @@ function setupAnnualChart(prefix, entries, maximum) {
             "aria-label",
             `${prefix === "delivery" ? "Lecture delivery" : "Audience participation"}: ${category} by year`
         );
-
         list.replaceChildren(rows);
     }
 
@@ -176,8 +174,10 @@ function renderSeriesStructure(structure) {
 function renderSpeakerAnalysis(analysis) {
     document.getElementById("speaker-assignments").textContent =
         format.format(analysis.speakerLectureAssignments);
+
     document.getElementById("speaker-unresolved").textContent =
         format.format(analysis.unresolvedSpeakerIds);
+
     document.getElementById("speaker-missing").textContent =
         format.format(analysis.lecturesWithoutSpeakerId);
 
@@ -190,18 +190,12 @@ function renderSpeakerAnalysis(analysis) {
 
 // Annual gender counts and metadata quality, precomputed in XSLT.
 const genderFields = [
-    "female",
-    "male",
-    "nonBinary",
-    "multipleGenderCategories",
-    "withoutKnownGender",
-    "total"
+    "female", "male", "nonBinary", "multipleGenderCategories",
+    "withoutKnownGender", "total"
 ];
 
 const genderQualityFields = [
-    "withoutSpeakerId",
-    "unresolvedSpeaker",
-    "unknownGender"
+    "withoutSpeakerId", "unresolvedSpeaker", "unknownGender"
 ];
 
 function renderGenderAnalysis(entries) {
@@ -270,14 +264,12 @@ function setupInstitutionAnalysis(analysis) {
         const option = document.createElement("option");
         option.value = `series:${entry.seriesId}`;
         option.textContent = entry.seriesName || entry.seriesId;
-
         select.appendChild(option);
         summaries.set(option.value, entry);
     }
 
     function render() {
         const summary = summaries.get(select.value);
-
         if (!summary) return;
 
         document.getElementById("institution-total").textContent =
@@ -287,7 +279,6 @@ function setupInstitutionAnalysis(analysis) {
 
         for (const entry of summary.types) {
             const row = document.createElement("tr");
-
             const heading = document.createElement("th");
             heading.scope = "row";
             heading.textContent = institutionLabels.get(entry.type);
@@ -297,9 +288,7 @@ function setupInstitutionAnalysis(analysis) {
 
             const share = document.createElement("td");
             share.textContent =
-                entry.share === null
-                    ? "–"
-                    : percent.format(entry.share);
+                entry.share === null ? "–" : percent.format(entry.share);
 
             row.append(heading, count, share);
             rows.appendChild(row);
@@ -317,6 +306,176 @@ function setupInstitutionAnalysis(analysis) {
     select.addEventListener("change", render);
     render();
     select.disabled = false;
+}
+
+// Disciplinary distribution: display the precomputed taxonomy summaries.
+const disciplineQuality = {
+    "discipline-no-id": "withoutDisciplineId",
+    "discipline-unresolved": "unresolvedDiscipline",
+    "discipline-invalid": "invalidDisciplineReference",
+    "discipline-no-known": "withoutKnownDiscipline",
+    "discipline-multiple": "multipleDisciplines"
+};
+
+function validDisciplineSummary(summary) {
+    if (!summary || !Number.isInteger(summary.total) || summary.total < 0) {
+        return false;
+    }
+
+    const validCount = value =>
+        Number.isInteger(value) &&
+        value >= 0 &&
+        value <= summary.total;
+
+    const validId = entry =>
+        entry &&
+        typeof entry.id === "string" &&
+        entry.id.length > 0 &&
+        validCount(entry.lectures);
+
+    const uniqueIds = entries =>
+        new Set(entries.map(entry => entry.id)).size === entries.length;
+
+    return Object.values(disciplineQuality).every(field =>
+        validCount(summary[field])) &&
+        Array.isArray(summary.disciplines) &&
+        summary.disciplines.length > 0 &&
+        summary.disciplines.every(entry =>
+            validId(entry) &&
+            typeof entry.label === "string" &&
+            (summary.total === 0
+                ? entry.share === null
+                : Number.isFinite(entry.share) &&
+                  entry.share >= 0 &&
+                  entry.share <= 1)
+        ) &&
+        uniqueIds(summary.disciplines) &&
+        Array.isArray(summary.unresolvedIds) &&
+        summary.unresolvedIds.every(entry =>
+            validId(entry) && entry.lectures > 0
+        ) &&
+        uniqueIds(summary.unresolvedIds);
+}
+
+function validDisciplineAnalysis(analysis) {
+    if (!validDisciplineSummary(analysis?.overall) ||
+        !Array.isArray(analysis.perSeries)) {
+
+        return false;
+    }
+
+    const ids = new Set(
+        analysis.overall.disciplines.map(entry => entry.id)
+    );
+
+    return analysis.perSeries.every(entry =>
+        validDisciplineSummary(entry) &&
+        typeof entry.seriesId === "string" &&
+        entry.seriesId.length > 0 &&
+        typeof entry.seriesName === "string" &&
+        entry.disciplines.length === ids.size &&
+        entry.disciplines.every(item => ids.has(item.id))
+    ) &&
+        new Set(analysis.perSeries.map(entry => entry.seriesId)).size ===
+            analysis.perSeries.length;
+}
+
+function setupDisciplineAnalysis(analysis) {
+    const select = document.getElementById("discipline-series");
+    const showZero = document.getElementById("discipline-show-zero");
+    const table = document.getElementById("discipline-table");
+
+    const summaries = new Map([["all", analysis.overall]]);
+
+    const series = [...analysis.perSeries].sort((a, b) =>
+        (a.seriesName || a.seriesId).localeCompare(
+            b.seriesName || b.seriesId, "en"
+        ) ||
+        a.seriesId.localeCompare(b.seriesId, "en")
+    );
+
+    for (const entry of series) {
+        const option = document.createElement("option");
+        option.value = `series:${entry.seriesId}`;
+        option.textContent = entry.seriesName || entry.seriesId;
+
+        select.appendChild(option);
+        summaries.set(option.value, entry);
+    }
+
+    function render() {
+        const summary = summaries.get(select.value);
+        if (!summary) return;
+
+        document.getElementById("discipline-total").textContent =
+            `Lecture records: ${format.format(summary.total)}`;
+
+        const entries = summary.disciplines.filter(entry =>
+            showZero.checked || entry.lectures > 0
+        );
+
+        const rows = document.createDocumentFragment();
+
+        for (const entry of entries) {
+            const row = document.createElement("tr");
+
+            const heading = document.createElement("th");
+            heading.scope = "row";
+            heading.textContent = entry.label || entry.id;
+
+            const count = document.createElement("td");
+            count.textContent = format.format(entry.lectures);
+
+            const share = document.createElement("td");
+            share.textContent =
+                entry.share === null ? "–" : percent.format(entry.share);
+
+            row.append(heading, count, share);
+            rows.appendChild(row);
+        }
+
+        if (!entries.length) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+
+            cell.colSpan = 3;
+            cell.textContent = "No recorded disciplines in this selection.";
+
+            row.appendChild(cell);
+            rows.appendChild(row);
+        }
+
+        table.replaceChildren(rows);
+
+        for (const [id, field] of Object.entries(disciplineQuality)) {
+            document.getElementById(id).textContent =
+                format.format(summary[field]);
+        }
+
+        renderTable(
+            "discipline-unresolved-table",
+            summary.unresolvedIds,
+            "id",
+            ["lectures"]
+        );
+
+        document.getElementById("discipline-unresolved-region").hidden =
+            summary.unresolvedIds.length === 0;
+
+        document.getElementById("discipline-unresolved-empty").hidden =
+            summary.unresolvedIds.length > 0;
+    }
+
+    select.value = "all";
+    showZero.checked = false;
+
+    select.addEventListener("change", render);
+    showZero.addEventListener("change", render);
+
+    render();
+
+    select.disabled = false;
+    showZero.disabled = false;
 }
 
 // Load and validate XSLT analysis results.
@@ -389,6 +548,7 @@ async function loadData() {
                 Number.isInteger(entry.speakers) &&
                 entry.speakers >= 0
             )) {
+
             throw new Error(
                 "Missing or invalid speaker analysis. Regenerate analyses.json."
             );
@@ -407,6 +567,7 @@ async function loadData() {
                     entry[field] <= entry.total
                 )
             )) {
+
             throw new Error(
                 "Missing or invalid gender analysis. Regenerate analyses.json."
             );
@@ -428,6 +589,15 @@ async function loadData() {
 
             throw new Error(
                 "Missing or invalid institution analysis. Regenerate analyses.json."
+            );
+        }
+
+        // Validate disciplinary distribution.
+        const discipline = data.disciplineAnalysis;
+
+        if (!validDisciplineAnalysis(discipline)) {
+            throw new Error(
+                "Missing or invalid discipline analysis. Regenerate analyses.json."
             );
         }
 
@@ -489,6 +659,9 @@ async function loadData() {
 
         // Institutional affiliations.
         setupInstitutionAnalysis(institution);
+
+        // Disciplinary distribution.
+        setupDisciplineAnalysis(discipline);
 
         status.textContent = "Data loaded successfully.";
 
