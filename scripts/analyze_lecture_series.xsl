@@ -55,6 +55,15 @@
       Missing and unresolved references are reported without guessing
       corrections. Categories may overlap; denominator is all lecture
       records, including canceled records. Empty series have null shares.
+    - Geographical connections: compare each affiliated institution's city
+      to the series host cities (@where). Local takes precedence over
+      national; national takes precedence over international. International
+      links are classified by the affiliation country's continent (Europe
+      or elsewhere). Multiple affiliation cities may yield different types;
+      each type counts at most once per lecture. Only local TEI references
+      are resolved; virtual hosts and missing geography remain unclassified.
+      Shares use all recorded lectures, including canceled records; empty
+      series have null shares. Data quality indicators are not exclusive.
     - Other legacy analyses are retained but not executed by default.
   -->
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
@@ -402,6 +411,108 @@
     }"/>
   </xsl:function>
 
+  <!-- JSON successor to ls-location-links-plot. -->
+  <xsl:variable name="geo-categories" as="xs:string+"
+    select="('local', 'national', 'European', 'other continents')"/>
+
+  <xsl:function name="local:geo-ids" as="xs:string*">
+    <xsl:param name="refs" as="attribute()*"/>
+    <xsl:sequence select="distinct-values(
+      (for $ref in $refs return tokenize(normalize-space($ref), '\s+'))
+      [starts-with(., '#') and string-length(.) gt 1] ! substring(., 2))"/>
+  </xsl:function>
+
+  <xsl:function name="local:geo-countries" as="xs:string*">
+    <xsl:param name="city" as="xs:string"/>
+    <xsl:sequence select="local:geo-ids($places[@type='city'][@xml:id=$city]/country/@corresp)
+      [. = $places[@type='country']/@xml:id]"/>
+  </xsl:function>
+
+  <xsl:function name="local:geo-category" as="xs:string?">
+    <xsl:param name="city" as="xs:string"/>
+    <xsl:param name="hosts" as="xs:string*"/>
+    <xsl:variable name="countries" select="local:geo-countries($city)"/>
+    <xsl:variable name="host-countries" select="distinct-values($hosts ! local:geo-countries(.))"/>
+    <xsl:variable name="continents" select="local:geo-ids($places[@type='country'][@xml:id=$countries]/bloc[@type='continent']/@corresp)
+      [. = $places[@type='continent']/@xml:id]"/>
+    <xsl:choose>
+      <xsl:when test="not($city = $places[@type='city']/@xml:id) or empty($hosts)"/>
+      <xsl:when test="$city = $hosts"><xsl:sequence select="'local'"/></xsl:when>
+      <xsl:when test="(some $host in $hosts satisfies count(local:geo-countries($host)) ne 1) or count($countries) ne 1"/>
+      <xsl:when test="$countries = $host-countries"><xsl:sequence select="'national'"/></xsl:when>
+      <xsl:when test="count($continents) ne 1"/>
+      <xsl:when test="$continents = 'europe'"><xsl:sequence select="'European'"/></xsl:when>
+      <xsl:otherwise><xsl:sequence select="'other continents'"/></xsl:otherwise>
+    </xsl:choose>
+  </xsl:function>
+
+  <xsl:function name="local:lecture-geo-record" as="map(*)">
+    <xsl:param name="lecture" as="element()"/>
+    <xsl:variable name="series" select="$lecture/ancestor::event[@type='lecture-series'][1]"/>
+    <xsl:variable name="host-ids" select="local:geo-ids($series/@where)"/>
+    <xsl:variable name="hosts" select="$host-ids[. = $places[@type='city']/@xml:id]"/>
+    <xsl:variable name="affiliation-ids" select="local:geo-ids($lecture//affiliation/@corresp)"/>
+    <xsl:variable name="orgs" select="$institutions[@xml:id=$affiliation-ids]"/>
+    <xsl:variable name="cities" select="local:geo-ids($orgs/place/@corresp)"/>
+    <xsl:variable name="categories" as="xs:string*"
+      select="distinct-values($cities ! local:geo-category(., $host-ids))"/>
+    <xsl:sequence select="map {
+      'seriesId': string($series/@xml:id),
+      'categories': $categories,
+      'withoutHostCity': empty($hosts),
+      'withoutAffiliationId': empty($affiliation-ids),
+      'unresolvedAffiliation': exists($affiliation-ids[not(. = $orgs/@xml:id)]),
+      'incompleteAffiliationGeography': exists($orgs[empty(local:geo-ids(place/@corresp))])
+        or (some $city in $cities satisfies
+          (count(local:geo-countries($city)) ne 1 or
+           count(local:geo-ids($places[@type='country'][@xml:id=local:geo-countries($city)]/bloc[@type='continent']/@corresp)
+                 [. = $places[@type='continent']/@xml:id]) ne 1)),
+      'withoutKnownConnection': empty($categories),
+      'multipleConnectionTypes': count($categories) gt 1
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:geo-summary" as="map(*)">
+    <xsl:param name="records" as="map(*)*"/>
+    <xsl:variable name="total" select="count($records)"/>
+    <xsl:sequence select="map {
+      'total': $total,
+      'connections': array {
+        for $category in $geo-categories
+        return map {
+          'type': $category,
+          'lectures': count($records[?categories = $category]),
+          'share': if ($total gt 0) then count($records[?categories = $category]) div $total else ()
+        }
+      },
+      'withoutHostCity': count($records[?withoutHostCity]),
+      'withoutAffiliationId': count($records[?withoutAffiliationId]),
+      'unresolvedAffiliation': count($records[?unresolvedAffiliation]),
+      'incompleteAffiliationGeography': count($records[?incompleteAffiliationGeography]),
+      'withoutKnownConnection': count($records[?withoutKnownConnection]),
+      'multipleConnectionTypes': count($records[?multipleConnectionTypes])
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:geographical-analysis" as="map(*)">
+    <xsl:param name="series" as="element()*"/>
+    <xsl:param name="lectures" as="element()*"/>
+    <xsl:variable name="records" as="map(*)*" select="$lectures ! local:lecture-geo-record(.)"/>
+    <xsl:sequence select="map {
+      'overall': local:geo-summary($records),
+      'perSeries': array {
+        for $s in $series
+        return map:merge((
+          map {
+            'seriesId': string($s/@xml:id),
+            'seriesName': normalize-space(string(($s/eventName[@xml:lang='en'], $s/eventName)[1]))
+          },
+          local:geo-summary($records[?seriesId = string($s/@xml:id)])
+        ))
+      }
+    }"/>
+  </xsl:function>
+
   <xsl:template match="/">
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
@@ -423,7 +534,8 @@
       'speakerAnalysis': local:speaker-analysis($lectures),
       'genderPerYear': array { local:gender-per-year($lectures) },
       'institutionTypeAnalysis': local:institution-type-analysis($lecture-series, $lectures),
-      'disciplineAnalysis': local:discipline-analysis($lecture-series, $lectures)
+      'disciplineAnalysis': local:discipline-analysis($lecture-series, $lectures),
+      'geographicalAnalysis': local:geographical-analysis($lecture-series, $lectures)
     }"/>
   </xsl:template>
   
