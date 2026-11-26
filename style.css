@@ -85,3 +85,46 @@ a {
     outline: 3px solid var(--accent);
     outline-offset: 4px;
 }
+
+
+.table-container {
+    overflow-x: auto;
+    margin: 1rem 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+caption {
+    text-align: left;
+    margin-bottom: 0.75rem;
+    color: var(--muted);
+}
+
+th,
+td {
+    padding: 0.65rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+}
+
+th:first-child {
+    text-align: left;
+}
+
+thead {
+    background: var(--surface);
+}
+
+tbody tr:nth-child(even) {
+    background: var(--surface);
+}
+
+.analysis-note,
+#undated-lectures {
+    font-size: 0.9rem;
+    color: var(--muted);
+}

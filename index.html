@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
   </head>
+  
   <body>
     <header>
       <h1>Lectures that Link</h1>
@@ -14,6 +15,9 @@
     </header>
     
     <main id="main-content">
+      
+      <!-- Overview -->
+      
       <section aria-labelledby="overview-heading">
         <h2 id="overview-heading">Overview</h2>
         
@@ -24,16 +28,58 @@
             <dt>Lecture series</dt>
             <dd id="count-series">–</dd>
           </div>
+          
           <div>
             <dt>Terms</dt>
             <dd id="count-terms">–</dd>
           </div>
+          
           <div>
             <dt>Lectures</dt>
             <dd id="count-lectures">–</dd>
           </div>
         </dl>
       </section>
+      
+      
+      <!-- Annual lecture statistics -->
+      
+      <section aria-labelledby="year-heading">
+        <h2 id="year-heading">Lectures per year</h2>
+        
+        <div class="table-container"
+          role="region"
+          aria-labelledby="year-heading"
+          tabindex="0">
+          
+          <table>
+            <caption>Annual lecture records by format</caption>
+            
+            <thead>
+              <tr>
+                <th scope="col">Year</th>
+                <th scope="col">In person</th>
+                <th scope="col">Online</th>
+                <th scope="col">Canceled</th>
+                <th scope="col">Other or unknown</th>
+                <th scope="col">Multiple formats</th>
+                <th scope="col">Total</th>
+              </tr>
+            </thead>
+            
+            <tbody id="lectures-per-year"></tbody>
+          </table>
+          
+        </div>
+        
+        <p class="analysis-note">
+          Totals include canceled lectures.
+          Format categories may overlap.
+        </p>
+        
+        <p id="undated-lectures"></p>
+      </section>
+      
     </main>
   </body>
 </html>
