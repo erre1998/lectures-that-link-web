@@ -148,6 +148,29 @@
         <p class="analysis-note">Canceled lectures are included.
           Only observed counts are shown; omitted counts have zero frequency.</p>
       </section>
+
+      <section aria-labelledby="speaker-heading">
+        <h2 id="speaker-heading">Lectures per speaker</h2>
+        <dl class="statistics">
+          <div><dt>Speaker–lecture assignments</dt><dd id="speaker-assignments">–</dd></div>
+          <div><dt>Unresolved speaker IDs</dt><dd id="speaker-unresolved">–</dd></div>
+          <div><dt>Lecture records without speaker ID</dt><dd id="speaker-missing">–</dd></div>
+        </dl>
+        <div class="table-container" role="region"
+             aria-labelledby="speaker-heading" tabindex="0">
+          <table aria-describedby="speaker-note">
+            <caption>Distribution of lecture records per speaker ID</caption>
+            <thead>
+              <tr>
+                <th scope="col">Lecture records</th>
+                <th scope="col">Speaker IDs</th>
+              </tr>
+            </thead>
+            <tbody id="speaker-distribution-table"></tbody>
+          </table>
+        </div>
+        <p id="speaker-note" class="analysis-note">Each speaker ID is counted once per lecture record. Joint and canceled lectures are included. Unresolved IDs remain in the distribution. Only observed counts are shown.</p>
+      </section>
     </main>
   </body>
 </html>

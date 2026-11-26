@@ -1,4 +1,3 @@
-
 const format = new Intl.NumberFormat("en");
 
 
@@ -46,13 +45,10 @@ function renderOverview(data) {
 
 
 // ==================================================
-// Annual statistics tables
+// Generic analysis tables
 // ==================================================
 
-// Display precomputed XSLT results without
-// recalculating the scientific statistics.
-
-function renderAnnualTable(id, entries, fields) {
+function renderTable(id, entries, headingField, fields) {
     const tbody = document.getElementById(id);
     const rows = document.createDocumentFragment();
 
@@ -61,7 +57,7 @@ function renderAnnualTable(id, entries, fields) {
 
         const heading = document.createElement("th");
         heading.scope = "row";
-        heading.textContent = entry.year;
+        heading.textContent = entry[headingField];
         row.appendChild(heading);
 
         for (const field of fields) {
@@ -80,9 +76,6 @@ function renderAnnualTable(id, entries, fields) {
 // ==================================================
 // Interactive annual charts
 // ==================================================
-
-// Visualize precomputed counts using a common
-// scale for both annual charts.
 
 function setupAnnualChart(prefix, entries, maximum) {
     const select = document.getElementById(`${prefix}-category`);
@@ -146,8 +139,6 @@ function setupAnnualChart(prefix, entries, maximum) {
 // Frequency distributions
 // ==================================================
 
-// Display frequency distributions calculated by XSLT.
-
 function renderDistribution(
     prefix,
     entries,
@@ -177,7 +168,6 @@ function renderDistribution(
         const category = entry[categoryField];
         const frequency = entry[frequencyField];
 
-
         // Table row
 
         const row = document.createElement("tr");
@@ -191,7 +181,6 @@ function renderDistribution(
 
         row.append(heading, cell);
         tableRows.appendChild(row);
-
 
         // Chart row
 
@@ -231,8 +220,6 @@ function renderDistribution(
 
 function renderSeriesStructure(structure) {
 
-    // Terms per lecture series
-
     renderDistribution(
         "terms-distribution",
         structure.termsPerSeriesDistribution,
@@ -241,15 +228,36 @@ function renderSeriesStructure(structure) {
         "lecture series"
     );
 
-
-    // Lectures per term
-
     renderDistribution(
         "lectures-distribution",
         structure.lecturesPerTermDistribution,
         "lectures",
         "terms",
         "terms"
+    );
+}
+
+
+// ==================================================
+// Speaker analysis
+// ==================================================
+
+function renderSpeakerAnalysis(analysis) {
+
+    document.getElementById("speaker-assignments").textContent =
+        format.format(analysis.speakerLectureAssignments);
+
+    document.getElementById("speaker-unresolved").textContent =
+        format.format(analysis.unresolvedSpeakerIds);
+
+    document.getElementById("speaker-missing").textContent =
+        format.format(analysis.lecturesWithoutSpeakerId);
+
+    renderTable(
+        "speaker-distribution-table",
+        analysis.lecturesPerSpeakerDistribution,
+        "lectures",
+        ["speakers"]
     );
 }
 
@@ -297,7 +305,7 @@ async function loadData() {
         }
 
 
-        // Validate corpus overview statistics
+        // Validate corpus overview
 
         const overview = data.corpusOverview;
 
@@ -322,16 +330,45 @@ async function loadData() {
         }
 
 
-        // Render corpus overview
+        // Validate speaker analysis
+
+        const speaker = data.speakerAnalysis;
+
+        if (!Array.isArray(
+                speaker?.lecturesPerSpeakerDistribution
+            ) ||
+            ![
+                speaker.speakerLectureAssignments,
+                speaker.unresolvedSpeakerIds,
+                speaker.lecturesWithoutSpeakerId
+            ].every(
+                value => Number.isInteger(value) && value >= 0
+            ) ||
+            !speaker.lecturesPerSpeakerDistribution.every(
+                entry =>
+                    Number.isInteger(entry.lectures) &&
+                    entry.lectures > 0 &&
+                    Number.isInteger(entry.speakers) &&
+                    entry.speakers >= 0
+            )) {
+
+            throw new Error(
+                "Missing or invalid speaker analysis. Regenerate analyses.json."
+            );
+        }
+
+
+        // Corpus overview
 
         renderOverview(data);
 
 
         // Lecture delivery table
 
-        renderAnnualTable(
+        renderTable(
             "lectures-per-year",
             data.lecturesPerYear,
+            "year",
             [
                 "inPerson",
                 "online",
@@ -345,9 +382,10 @@ async function loadData() {
 
         // Audience participation table
 
-        renderAnnualTable(
+        renderTable(
             "audience-per-year",
             data.audiencePerYear,
+            "year",
             [
                 "inPerson",
                 "online",
@@ -393,6 +431,11 @@ async function loadData() {
         // Lecture series structure
 
         renderSeriesStructure(data.seriesStructure);
+
+
+        // Speaker analysis
+
+        renderSpeakerAnalysis(speaker);
 
 
         // Success message
