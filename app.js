@@ -4,136 +4,119 @@ const percent = new Intl.NumberFormat("en", {
     style: "percent", maximumFractionDigits: 1
 });
 
-function renderOverview(data) {
-    document.getElementById("dataset-version").textContent =
-        `Dataset: ${data.datasetVersion}`;
-    document.getElementById("count-series").textContent =
-        format.format(data.counts.series);
-    document.getElementById("count-terms").textContent =
-        format.format(data.counts.terms);
-    document.getElementById("count-lectures").textContent =
-        format.format(data.counts.lectures);
+const byId = id => document.getElementById(id);
+const validCount = value => Number.isInteger(value) && value >= 0;
 
-    document.getElementById("count-speakers").textContent =
-        format.format(data.speakerAnalysis.uniqueSpeakers);
-    document.getElementById("count-organizers").textContent =
-        format.format(data.corpusOverview.organizers.registeredPersons);
-    document.getElementById("count-host-institutions").textContent =
-        format.format(data.corpusOverview.hostInstitutions.registeredInstitutions);
-    document.getElementById("count-affiliation-institutions").textContent =
-        format.format(data.corpusOverview.affiliationInstitutions.registeredInstitutions);
-    document.getElementById("count-host-cities").textContent =
-        format.format(data.corpusOverview.hostGeography.cities);
-    document.getElementById("count-host-countries").textContent =
-        format.format(data.corpusOverview.hostGeography.countries);
-    document.getElementById("count-affiliation-cities").textContent =
-        format.format(data.corpusOverview.affiliationGeography.cities);
-    document.getElementById("count-affiliation-countries").textContent =
-        format.format(data.corpusOverview.affiliationGeography.countries);
+function setCount(id, value) {
+    byId(id).textContent = format.format(value);
 }
 
-// Display precomputed XSLT results without recalculating the statistics.
-function renderTable(id, entries, headingField, fields) {
-    const tbody = document.getElementById(id);
+
+// ==================================================
+// Corpus overview
+// ==================================================
+
+function overviewValues(data) {
+    const overview = data.corpusOverview;
+
+    return {
+        "count-series": data.counts?.series,
+        "count-terms": data.counts?.terms,
+        "count-lectures": data.counts?.lectures,
+        "count-speakers": data.speakerAnalysis?.uniqueSpeakers,
+        "count-organizers": overview?.organizers?.registeredPersons,
+        "count-host-institutions": overview?.hostInstitutions?.registeredInstitutions,
+        "count-affiliation-institutions": overview?.affiliationInstitutions?.registeredInstitutions,
+        "count-host-cities": overview?.hostGeography?.cities,
+        "count-host-countries": overview?.hostGeography?.countries,
+        "count-affiliation-cities": overview?.affiliationGeography?.cities,
+        "count-affiliation-countries": overview?.affiliationGeography?.countries
+    };
+}
+
+function renderOverview(data) {
+    byId("dataset-version").textContent =
+        `Dataset: ${data.datasetVersion}`;
+
+    for (const [id, value] of Object.entries(overviewValues(data))) {
+        setCount(id, value);
+    }
+}
+
+
+// ==================================================
+// Generic analysis tables
+// ==================================================
+
+// Render precomputed statistics as accessible tables.
+
+function renderRows(id, entries, label, cells, emptyMessage = "") {
     const rows = document.createDocumentFragment();
 
     for (const entry of entries) {
         const row = document.createElement("tr");
+
         const heading = document.createElement("th");
         heading.scope = "row";
-        heading.textContent = entry[headingField];
+        heading.textContent = label(entry);
         row.appendChild(heading);
 
-        for (const field of fields) {
+        for (const cellValue of cells) {
             const cell = document.createElement("td");
-            cell.textContent = format.format(entry[field]);
+            cell.textContent = cellValue(entry);
             row.appendChild(cell);
         }
+
         rows.appendChild(row);
     }
-    tbody.replaceChildren(rows);
-}
 
-// Visualize precomputed counts using a common scale for both charts.
-function setupAnnualChart(prefix, entries, maximum) {
-    const select = document.getElementById(`${prefix}-category`);
-    const list = document.getElementById(`${prefix}-chart`);
-    const scale = document.getElementById(`${prefix}-scale`);
+    if (!entries.length && emptyMessage) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
 
-    scale.textContent = `Scale: 0–${format.format(maximum)} lecture records`;
+        cell.colSpan = cells.length + 1;
+        cell.textContent = emptyMessage;
 
-    function render() {
-        const field = select.value;
-        const category = select.options[select.selectedIndex].text;
-        const rows = document.createDocumentFragment();
-
-        for (const entry of entries) {
-            const value = entry[field];
-            const item = document.createElement("li");
-
-            const year = document.createElement("span");
-            year.className = "chart-year";
-            year.textContent = entry.year;
-
-            const track = document.createElement("span");
-            track.className = "chart-track";
-            track.setAttribute("aria-hidden", "true");
-
-            const bar = document.createElement("span");
-            bar.className = "chart-bar";
-            bar.style.width = `${maximum > 0 ? value / maximum * 100 : 0}%`;
-            track.appendChild(bar);
-
-            const count = document.createElement("span");
-            count.className = "chart-value";
-            count.textContent = format.format(value);
-
-            item.append(year, track, count);
-            rows.appendChild(item);
-        }
-
-        list.setAttribute(
-            "aria-label",
-            `${prefix === "delivery" ? "Lecture delivery" : "Audience participation"}: ${category} by year`
-        );
-        list.replaceChildren(rows);
+        row.appendChild(cell);
+        rows.appendChild(row);
     }
 
-    select.addEventListener("change", render);
-    render();
-    select.disabled = false;
+    byId(id).replaceChildren(rows);
 }
 
-// Display frequency distributions calculated by XSLT.
-function renderDistribution(prefix, entries, categoryField, frequencyField, unit) {
-    const tbody = document.getElementById(`${prefix}-table`);
-    const chart = document.getElementById(`${prefix}-chart`);
-    const scale = document.getElementById(`${prefix}-scale`);
-    const tableRows = document.createDocumentFragment();
-    const chartRows = document.createDocumentFragment();
+function renderTable(id, entries, headingField, fields) {
+    renderRows(
+        id,
+        entries,
+        entry => entry[headingField],
+        fields.map(field => entry => format.format(entry[field]))
+    );
+}
 
-    // The maximum controls only the visual scale, not the analysis.
-    const maximum = Math.max(0, ...entries.map(entry => entry[frequencyField]));
-    scale.textContent = `Scale: 0–${format.format(maximum)} ${unit}`;
+function renderShareTable(id, entries, label, emptyMessage = "") {
+    renderRows(id, entries, label, [
+        entry => format.format(entry.lectures),
+        entry => entry.share === null ? "–" : percent.format(entry.share)
+    ], emptyMessage);
+}
+
+
+// ==================================================
+// Generic charts
+// ==================================================
+
+// Chart widths are presentation values,
+// not scientific calculations.
+
+function renderBars(id, entries, label, value, maximum) {
+    const rows = document.createDocumentFragment();
 
     for (const entry of entries) {
-        const category = entry[categoryField];
-        const frequency = entry[frequencyField];
-
-        const row = document.createElement("tr");
-        const heading = document.createElement("th");
-        heading.scope = "row";
-        heading.textContent = format.format(category);
-
-        const cell = document.createElement("td");
-        cell.textContent = format.format(frequency);
-        row.append(heading, cell);
-        tableRows.appendChild(row);
-
         const item = document.createElement("li");
-        const label = document.createElement("span");
-        label.className = "chart-year";
-        label.textContent = format.format(category);
+
+        const name = document.createElement("span");
+        name.className = "chart-year";
+        name.textContent = label(entry);
 
         const track = document.createElement("span");
         track.className = "chart-track";
@@ -141,20 +124,99 @@ function renderDistribution(prefix, entries, categoryField, frequencyField, unit
 
         const bar = document.createElement("span");
         bar.className = "chart-bar";
-        bar.style.width = `${maximum > 0 ? frequency / maximum * 100 : 0}%`;
+        bar.style.width =
+            `${maximum > 0 ? value(entry) / maximum * 100 : 0}%`;
+
         track.appendChild(bar);
 
         const count = document.createElement("span");
         count.className = "chart-value";
-        count.textContent = format.format(frequency);
+        count.textContent = format.format(value(entry));
 
-        item.append(label, track, count);
-        chartRows.appendChild(item);
+        item.append(name, track, count);
+        rows.appendChild(item);
     }
 
-    tbody.replaceChildren(tableRows);
-    chart.replaceChildren(chartRows);
+    byId(id).replaceChildren(rows);
 }
+
+
+// ==================================================
+// Interactive annual charts
+// ==================================================
+
+function setupAnnualChart(prefix, entries, maximum) {
+    const select = byId(`${prefix}-category`);
+    const list = byId(`${prefix}-chart`);
+
+    byId(`${prefix}-scale`).textContent =
+        `Scale: 0–${format.format(maximum)} lecture records`;
+
+    function render() {
+        const field = select.value;
+        const category = select.options[select.selectedIndex].text;
+
+        const name = prefix === "delivery"
+            ? "Lecture delivery"
+            : "Audience participation";
+
+        list.setAttribute(
+            "aria-label",
+            `${name}: ${category} by year`
+        );
+
+        renderBars(
+            `${prefix}-chart`,
+            entries,
+            entry => entry.year,
+            entry => entry[field],
+            maximum
+        );
+    }
+
+    select.addEventListener("change", render);
+    render();
+    select.disabled = false;
+}
+
+
+// ==================================================
+// Frequency distributions
+// ==================================================
+
+function renderDistribution(
+    prefix, entries, categoryField, frequencyField, unit
+) {
+    const maximum = Math.max(
+        0,
+        ...entries.map(entry => entry[frequencyField])
+    );
+
+    byId(`${prefix}-scale`).textContent =
+        `Scale: 0–${format.format(maximum)} ${unit}`;
+
+    const label = entry => format.format(entry[categoryField]);
+
+    renderRows(
+        `${prefix}-table`,
+        entries,
+        label,
+        [entry => format.format(entry[frequencyField])]
+    );
+
+    renderBars(
+        `${prefix}-chart`,
+        entries,
+        label,
+        entry => entry[frequencyField],
+        maximum
+    );
+}
+
+
+// ==================================================
+// Lecture series structure
+// ==================================================
 
 function renderSeriesStructure(structure) {
     renderDistribution(
@@ -170,40 +232,175 @@ function renderSeriesStructure(structure) {
     );
 }
 
-// Speaker frequency and data quality, precomputed in XSLT.
+
+// ==================================================
+// Speaker analysis
+// ==================================================
+
 function renderSpeakerAnalysis(analysis) {
-    document.getElementById("speaker-assignments").textContent =
-        format.format(analysis.speakerLectureAssignments);
-
-    document.getElementById("speaker-unresolved").textContent =
-        format.format(analysis.unresolvedSpeakerIds);
-
-    document.getElementById("speaker-missing").textContent =
-        format.format(analysis.lecturesWithoutSpeakerId);
+    setCount("speaker-assignments", analysis.speakerLectureAssignments);
+    setCount("speaker-unresolved", analysis.unresolvedSpeakerIds);
+    setCount("speaker-missing", analysis.lecturesWithoutSpeakerId);
 
     renderTable(
         "speaker-distribution-table",
         analysis.lecturesPerSpeakerDistribution,
-        "lectures", ["speakers"]
+        "lectures",
+        ["speakers"]
     );
 }
 
-// Annual gender counts and metadata quality, precomputed in XSLT.
+
+// ==================================================
+// Annual gender analysis
+// ==================================================
+
 const genderFields = [
-    "female", "male", "nonBinary", "multipleGenderCategories",
-    "withoutKnownGender", "total"
+    "female",
+    "male",
+    "nonBinary",
+    "multipleGenderCategories",
+    "withoutKnownGender",
+    "total"
 ];
 
 const genderQualityFields = [
-    "withoutSpeakerId", "unresolvedSpeaker", "unknownGender"
+    "withoutSpeakerId",
+    "unresolvedSpeaker",
+    "unknownGender"
 ];
 
 function renderGenderAnalysis(entries) {
-    renderTable("gender-per-year", entries, "year", genderFields);
-    renderTable("gender-quality-per-year", entries, "year", genderQualityFields);
+    renderTable(
+        "gender-per-year",
+        entries,
+        "year",
+        genderFields
+    );
+
+    renderTable(
+        "gender-quality-per-year",
+        entries,
+        "year",
+        genderQualityFields
+    );
 }
 
-// Institutional affiliations: use the XSLT summaries without recalculation.
+
+// ==================================================
+// Shared validation for corpus and series summaries
+// ==================================================
+
+function validShare(entry, total) {
+    return entry &&
+        validCount(entry.lectures) &&
+        entry.lectures <= total &&
+        (total === 0
+            ? entry.share === null
+            : Number.isFinite(entry.share) &&
+              entry.share >= 0 &&
+              entry.share <= 1);
+}
+
+function validQuality(summary, quality) {
+    return summary &&
+        validCount(summary.total) &&
+        Object.values(quality).every(field =>
+            validCount(summary[field]) &&
+            summary[field] <= summary.total
+        );
+}
+
+function uniqueValues(entries, field) {
+    return new Set(
+        entries.map(entry => entry[field])
+    ).size === entries.length;
+}
+
+function validSeriesAnalysis(analysis, validate) {
+    return Boolean(
+        analysis &&
+        validate(analysis.overall) &&
+        Array.isArray(analysis.perSeries) &&
+        analysis.perSeries.every(entry =>
+            validate(entry) &&
+            typeof entry.seriesId === "string" &&
+            entry.seriesId.length > 0 &&
+            typeof entry.seriesName === "string"
+        ) &&
+        uniqueValues(analysis.perSeries, "seriesId")
+    );
+}
+
+
+// ==================================================
+// Shared lecture series selection
+// ==================================================
+
+function setupSeriesSelector(prefix, analysis, renderSummary) {
+    const select = byId(`${prefix}-series`);
+    const summaries = new Map([["all", analysis.overall]]);
+
+    const series = [...analysis.perSeries].sort((a, b) =>
+        (a.seriesName || a.seriesId).localeCompare(
+            b.seriesName || b.seriesId, "en"
+        ) ||
+        a.seriesId.localeCompare(b.seriesId, "en")
+    );
+
+    for (const entry of series) {
+        const option = document.createElement("option");
+
+        option.value = `series:${entry.seriesId}`;
+        option.textContent = entry.seriesName || entry.seriesId;
+
+        select.appendChild(option);
+        summaries.set(option.value, entry);
+    }
+
+    function render() {
+        const summary = summaries.get(select.value);
+
+        if (!summary) return;
+
+        byId(`${prefix}-total`).textContent =
+            `Lecture records: ${format.format(summary.total)}`;
+
+        renderSummary(summary);
+    }
+
+    select.value = "all";
+    select.addEventListener("change", render);
+
+    render();
+
+    select.disabled = false;
+
+    return render;
+}
+
+function renderQuality(summary, quality) {
+    for (const [id, field] of Object.entries(quality)) {
+        setCount(id, summary[field]);
+    }
+}
+
+function validTypeSummary(summary, field, labels, quality) {
+    return validQuality(summary, quality) &&
+        Array.isArray(summary[field]) &&
+        summary[field].length === labels.size &&
+        summary[field].every(entry =>
+            validShare(entry, summary.total) &&
+            labels.has(entry.type)
+        ) &&
+        uniqueValues(summary[field], "type");
+}
+
+
+// ==================================================
+// Institutional affiliations
+// ==================================================
+
 const institutionLabels = new Map([
     ["university", "University"],
     ["research_institution", "Research institution"],
@@ -222,93 +419,31 @@ const institutionQuality = {
 };
 
 function validInstitutionSummary(summary) {
-    if (!summary || !Number.isInteger(summary.total) || summary.total < 0) {
-        return false;
-    }
-
-    const validCount = value =>
-        Number.isInteger(value) &&
-        value >= 0 &&
-        value <= summary.total;
-
-    return Object.values(institutionQuality).every(field =>
-        validCount(summary[field])) &&
-        Array.isArray(summary.types) &&
-        summary.types.length === institutionLabels.size &&
-        new Set(summary.types.map(entry => entry?.type)).size === institutionLabels.size &&
-        summary.types.every(entry =>
-            entry &&
-            institutionLabels.has(entry.type) &&
-            validCount(entry.lectures) &&
-            (summary.total === 0
-                ? entry.share === null
-                : Number.isFinite(entry.share) &&
-                  entry.share >= 0 &&
-                  entry.share <= 1)
-        );
+    return validTypeSummary(
+        summary,
+        "types",
+        institutionLabels,
+        institutionQuality
+    );
 }
 
 function setupInstitutionAnalysis(analysis) {
-    const select = document.getElementById("institution-series");
-    const table = document.getElementById("institution-type-table");
-    const summaries = new Map([["all", analysis.overall]]);
+    setupSeriesSelector("institution", analysis, summary => {
+        renderShareTable(
+            "institution-type-table",
+            summary.types,
+            entry => institutionLabels.get(entry.type)
+        );
 
-    const series = [...analysis.perSeries].sort((a, b) =>
-        (a.seriesName || a.seriesId).localeCompare(
-            b.seriesName || b.seriesId, "en"
-        ) ||
-        a.seriesId.localeCompare(b.seriesId, "en")
-    );
-
-    for (const entry of series) {
-        const option = document.createElement("option");
-        option.value = `series:${entry.seriesId}`;
-        option.textContent = entry.seriesName || entry.seriesId;
-        select.appendChild(option);
-        summaries.set(option.value, entry);
-    }
-
-    function render() {
-        const summary = summaries.get(select.value);
-        if (!summary) return;
-
-        document.getElementById("institution-total").textContent =
-            `Lecture records: ${format.format(summary.total)}`;
-
-        const rows = document.createDocumentFragment();
-
-        for (const entry of summary.types) {
-            const row = document.createElement("tr");
-            const heading = document.createElement("th");
-            heading.scope = "row";
-            heading.textContent = institutionLabels.get(entry.type);
-
-            const count = document.createElement("td");
-            count.textContent = format.format(entry.lectures);
-
-            const share = document.createElement("td");
-            share.textContent =
-                entry.share === null ? "–" : percent.format(entry.share);
-
-            row.append(heading, count, share);
-            rows.appendChild(row);
-        }
-
-        table.replaceChildren(rows);
-
-        for (const [id, field] of Object.entries(institutionQuality)) {
-            document.getElementById(id).textContent =
-                format.format(summary[field]);
-        }
-    }
-
-    select.value = "all";
-    select.addEventListener("change", render);
-    render();
-    select.disabled = false;
+        renderQuality(summary, institutionQuality);
+    });
 }
 
-// Disciplinary distribution: display the precomputed taxonomy summaries.
+
+// ==================================================
+// Disciplinary distribution
+// ==================================================
+
 const disciplineQuality = {
     "discipline-no-id": "withoutDisciplineId",
     "discipline-unresolved": "unresolvedDiscipline",
@@ -318,49 +453,34 @@ const disciplineQuality = {
 };
 
 function validDisciplineSummary(summary) {
-    if (!summary || !Number.isInteger(summary.total) || summary.total < 0) {
+    if (!validQuality(summary, disciplineQuality)) {
         return false;
     }
-
-    const validCount = value =>
-        Number.isInteger(value) &&
-        value >= 0 &&
-        value <= summary.total;
 
     const validId = entry =>
         entry &&
         typeof entry.id === "string" &&
         entry.id.length > 0 &&
-        validCount(entry.lectures);
+        validCount(entry.lectures) &&
+        entry.lectures <= summary.total;
 
-    const uniqueIds = entries =>
-        new Set(entries.map(entry => entry.id)).size === entries.length;
-
-    return Object.values(disciplineQuality).every(field =>
-        validCount(summary[field])) &&
-        Array.isArray(summary.disciplines) &&
+    return Array.isArray(summary.disciplines) &&
         summary.disciplines.length > 0 &&
         summary.disciplines.every(entry =>
             validId(entry) &&
             typeof entry.label === "string" &&
-            (summary.total === 0
-                ? entry.share === null
-                : Number.isFinite(entry.share) &&
-                  entry.share >= 0 &&
-                  entry.share <= 1)
+            validShare(entry, summary.total)
         ) &&
-        uniqueIds(summary.disciplines) &&
+        uniqueValues(summary.disciplines, "id") &&
         Array.isArray(summary.unresolvedIds) &&
         summary.unresolvedIds.every(entry =>
             validId(entry) && entry.lectures > 0
         ) &&
-        uniqueIds(summary.unresolvedIds);
+        uniqueValues(summary.unresolvedIds, "id");
 }
 
 function validDisciplineAnalysis(analysis) {
-    if (!validDisciplineSummary(analysis?.overall) ||
-        !Array.isArray(analysis.perSeries)) {
-
+    if (!validSeriesAnalysis(analysis, validDisciplineSummary)) {
         return false;
     }
 
@@ -369,118 +489,111 @@ function validDisciplineAnalysis(analysis) {
     );
 
     return analysis.perSeries.every(entry =>
-        validDisciplineSummary(entry) &&
-        typeof entry.seriesId === "string" &&
-        entry.seriesId.length > 0 &&
-        typeof entry.seriesName === "string" &&
         entry.disciplines.length === ids.size &&
         entry.disciplines.every(item => ids.has(item.id))
-    ) &&
-        new Set(analysis.perSeries.map(entry => entry.seriesId)).size ===
-            analysis.perSeries.length;
+    );
 }
 
 function setupDisciplineAnalysis(analysis) {
-    const select = document.getElementById("discipline-series");
-    const showZero = document.getElementById("discipline-show-zero");
-    const table = document.getElementById("discipline-table");
+    const showZero = byId("discipline-show-zero");
 
-    const summaries = new Map([["all", analysis.overall]]);
-
-    const series = [...analysis.perSeries].sort((a, b) =>
-        (a.seriesName || a.seriesId).localeCompare(
-            b.seriesName || b.seriesId, "en"
-        ) ||
-        a.seriesId.localeCompare(b.seriesId, "en")
-    );
-
-    for (const entry of series) {
-        const option = document.createElement("option");
-        option.value = `series:${entry.seriesId}`;
-        option.textContent = entry.seriesName || entry.seriesId;
-
-        select.appendChild(option);
-        summaries.set(option.value, entry);
-    }
-
-    function render() {
-        const summary = summaries.get(select.value);
-        if (!summary) return;
-
-        document.getElementById("discipline-total").textContent =
-            `Lecture records: ${format.format(summary.total)}`;
-
-        const entries = summary.disciplines.filter(entry =>
-            showZero.checked || entry.lectures > 0
-        );
-
-        const rows = document.createDocumentFragment();
-
-        for (const entry of entries) {
-            const row = document.createElement("tr");
-
-            const heading = document.createElement("th");
-            heading.scope = "row";
-            heading.textContent = entry.label || entry.id;
-
-            const count = document.createElement("td");
-            count.textContent = format.format(entry.lectures);
-
-            const share = document.createElement("td");
-            share.textContent =
-                entry.share === null ? "–" : percent.format(entry.share);
-
-            row.append(heading, count, share);
-            rows.appendChild(row);
-        }
-
-        if (!entries.length) {
-            const row = document.createElement("tr");
-            const cell = document.createElement("td");
-
-            cell.colSpan = 3;
-            cell.textContent = "No recorded disciplines in this selection.";
-
-            row.appendChild(cell);
-            rows.appendChild(row);
-        }
-
-        table.replaceChildren(rows);
-
-        for (const [id, field] of Object.entries(disciplineQuality)) {
-            document.getElementById(id).textContent =
-                format.format(summary[field]);
-        }
-
-        renderTable(
-            "discipline-unresolved-table",
-            summary.unresolvedIds,
-            "id",
-            ["lectures"]
-        );
-
-        document.getElementById("discipline-unresolved-region").hidden =
-            summary.unresolvedIds.length === 0;
-
-        document.getElementById("discipline-unresolved-empty").hidden =
-            summary.unresolvedIds.length > 0;
-    }
-
-    select.value = "all";
     showZero.checked = false;
 
-    select.addEventListener("change", render);
+    const render = setupSeriesSelector(
+        "discipline",
+        analysis,
+        summary => {
+            const entries = summary.disciplines.filter(entry =>
+                showZero.checked || entry.lectures > 0
+            );
+
+            renderShareTable(
+                "discipline-table",
+                entries,
+                entry => entry.label || entry.id,
+                "No recorded disciplines in this selection."
+            );
+
+            renderQuality(summary, disciplineQuality);
+
+            renderTable(
+                "discipline-unresolved-table",
+                summary.unresolvedIds,
+                "id",
+                ["lectures"]
+            );
+
+            byId("discipline-unresolved-region").hidden =
+                summary.unresolvedIds.length === 0;
+
+            byId("discipline-unresolved-empty").hidden =
+                summary.unresolvedIds.length > 0;
+        }
+    );
+
     showZero.addEventListener("change", render);
-
-    render();
-
-    select.disabled = false;
     showZero.disabled = false;
 }
 
-// Load and validate XSLT analysis results.
+
+// ==================================================
+// Geographical connections
+// ==================================================
+
+// Categories and counts are supplied by XSLT.
+
+const geographyLabels = new Map([
+    ["local", "Local"],
+    ["national", "National"],
+    ["European", "European"],
+    ["other continents", "Other continents"]
+]);
+
+const geographyQuality = {
+    "geography-no-host": "withoutHostCity",
+    "geography-no-id": "withoutAffiliationId",
+    "geography-unresolved": "unresolvedAffiliation",
+    "geography-incomplete": "incompleteAffiliationGeography",
+    "geography-no-known": "withoutKnownConnection",
+    "geography-multiple": "multipleConnectionTypes"
+};
+
+function validGeographySummary(summary) {
+    return validTypeSummary(
+        summary,
+        "connections",
+        geographyLabels,
+        geographyQuality
+    );
+}
+
+function setupGeographyAnalysis(analysis) {
+    setupSeriesSelector("geography", analysis, summary => {
+        renderShareTable(
+            "geography-table",
+            summary.connections,
+            entry => geographyLabels.get(entry.type)
+        );
+
+        renderQuality(summary, geographyQuality);
+    });
+}
+
+
+// ==================================================
+// Load and validate XSLT analysis results
+// ==================================================
+
 async function loadData() {
-    const status = document.getElementById("status");
+    const status = byId("status");
+
+    function requireValid(condition, name) {
+        if (!condition) {
+            throw new Error(
+                `Missing or invalid ${name}. Regenerate analyses.json.`
+            );
+        }
+    }
 
     try {
         const response = await fetch("./data/analyses.json");
@@ -491,120 +604,109 @@ async function loadData() {
 
         const data = await response.json();
 
-        // Validate annual analysis results.
-        if (!Array.isArray(data.lecturesPerYear) ||
-            !Array.isArray(data.audiencePerYear)) {
 
-            throw new Error(
-                "Missing annual analysis results. Regenerate analyses.json."
-            );
-        }
+        // Validate annual analysis results.
+
+        requireValid(
+            Array.isArray(data.lecturesPerYear) &&
+            Array.isArray(data.audiencePerYear),
+            "annual analysis results"
+        );
+
 
         // Validate lecture series structure.
-        if (!Array.isArray(data.seriesStructure?.termsPerSeriesDistribution) ||
-            !Array.isArray(data.seriesStructure?.lecturesPerTermDistribution)) {
 
-            throw new Error(
-                "Missing series structure results. Regenerate analyses.json."
-            );
-        }
+        requireValid(
+            Array.isArray(data.seriesStructure?.termsPerSeriesDistribution) &&
+            Array.isArray(data.seriesStructure?.lecturesPerTermDistribution),
+            "series structure results"
+        );
+
 
         // Validate corpus overview.
-        const overview = data.corpusOverview;
 
-        const overviewCounts = [
-            data.speakerAnalysis?.uniqueSpeakers,
-            overview?.organizers?.registeredPersons,
-            overview?.hostInstitutions?.registeredInstitutions,
-            overview?.affiliationInstitutions?.registeredInstitutions,
-            overview?.hostGeography?.cities,
-            overview?.hostGeography?.countries,
-            overview?.affiliationGeography?.cities,
-            overview?.affiliationGeography?.countries
-        ];
+        requireValid(
+            Object.values(overviewValues(data)).every(validCount),
+            "corpus overview"
+        );
 
-        if (!overviewCounts.every(
-            value => Number.isInteger(value) && value >= 0
-        )) {
-            throw new Error(
-                "Missing or invalid corpus overview. Regenerate analyses.json."
-            );
-        }
 
         // Validate speaker analysis.
+
         const speaker = data.speakerAnalysis;
 
-        if (!Array.isArray(speaker?.lecturesPerSpeakerDistribution) ||
-            ![
+        requireValid(
+            Array.isArray(speaker?.lecturesPerSpeakerDistribution) &&
+            [
                 speaker.speakerLectureAssignments,
                 speaker.unresolvedSpeakerIds,
                 speaker.lecturesWithoutSpeakerId
-            ].every(value =>
-                Number.isInteger(value) && value >= 0
-            ) ||
-            !speaker.lecturesPerSpeakerDistribution.every(entry =>
+            ].every(validCount) &&
+            speaker.lecturesPerSpeakerDistribution.every(entry =>
+                entry &&
                 Number.isInteger(entry.lectures) &&
                 entry.lectures > 0 &&
-                Number.isInteger(entry.speakers) &&
-                entry.speakers >= 0
-            )) {
+                validCount(entry.speakers)
+            ),
+            "speaker analysis"
+        );
 
-            throw new Error(
-                "Missing or invalid speaker analysis. Regenerate analyses.json."
-            );
-        }
 
-        // Validate annual gender analysis.
+        // Validate gender analysis.
+
         const gender = data.genderPerYear;
 
-        if (!Array.isArray(gender) ||
-            !gender.every(entry =>
+        requireValid(
+            Array.isArray(gender) &&
+            gender.every(entry =>
                 entry &&
                 Number.isInteger(entry.year) &&
                 [...genderFields, ...genderQualityFields].every(field =>
-                    Number.isInteger(entry[field]) &&
-                    entry[field] >= 0 &&
+                    validCount(entry[field]) &&
                     entry[field] <= entry.total
                 )
-            )) {
+            ),
+            "gender analysis"
+        );
 
-            throw new Error(
-                "Missing or invalid gender analysis. Regenerate analyses.json."
-            );
-        }
 
         // Validate institution analysis.
+
         const institution = data.institutionTypeAnalysis;
 
-        if (!validInstitutionSummary(institution?.overall) ||
-            !Array.isArray(institution.perSeries) ||
-            !institution.perSeries.every(entry =>
-                validInstitutionSummary(entry) &&
-                typeof entry.seriesId === "string" &&
-                entry.seriesId.length > 0 &&
-                typeof entry.seriesName === "string"
-            ) ||
-            new Set(institution.perSeries.map(entry => entry.seriesId)).size !==
-                institution.perSeries.length) {
+        requireValid(
+            validSeriesAnalysis(institution, validInstitutionSummary),
+            "institution analysis"
+        );
 
-            throw new Error(
-                "Missing or invalid institution analysis. Regenerate analyses.json."
-            );
-        }
 
         // Validate disciplinary distribution.
+
         const discipline = data.disciplineAnalysis;
 
-        if (!validDisciplineAnalysis(discipline)) {
-            throw new Error(
-                "Missing or invalid discipline analysis. Regenerate analyses.json."
-            );
-        }
+        requireValid(
+            validDisciplineAnalysis(discipline),
+            "discipline analysis"
+        );
+
+
+        // Validate geographical connections.
+
+        const geography = data.geographicalAnalysis;
+
+        requireValid(
+            validSeriesAnalysis(geography, validGeographySummary),
+            "geographical analysis"
+        );
+
 
         // Corpus overview.
+
         renderOverview(data);
 
+
         // Lecture delivery.
+
         renderTable(
             "lectures-per-year",
             data.lecturesPerYear,
@@ -619,7 +721,9 @@ async function loadData() {
             ]
         );
 
+
         // Audience participation.
+
         renderTable(
             "audience-per-year",
             data.audiencePerYear,
@@ -635,7 +739,9 @@ async function loadData() {
             ]
         );
 
+
         // Common scale for annual charts.
+
         const maximum = Math.max(
             0,
             ...data.lecturesPerYear.map(entry => entry.total),
@@ -645,23 +751,39 @@ async function loadData() {
         setupAnnualChart("delivery", data.lecturesPerYear, maximum);
         setupAnnualChart("audience", data.audiencePerYear, maximum);
 
-        document.getElementById("undated-lectures").textContent =
+        byId("undated-lectures").textContent =
             `Undated lectures: ${format.format(data.undatedLectures)}`;
 
+
         // Lecture series structure.
+
         renderSeriesStructure(data.seriesStructure);
 
+
         // Speaker analysis.
+
         renderSpeakerAnalysis(speaker);
 
+
         // Annual gender analysis.
+
         renderGenderAnalysis(gender);
 
+
         // Institutional affiliations.
+
         setupInstitutionAnalysis(institution);
 
+
         // Disciplinary distribution.
+
         setupDisciplineAnalysis(discipline);
+
+
+        // Geographical connections.
+
+        setupGeographyAnalysis(geography);
+
 
         status.textContent = "Data loaded successfully.";
 
@@ -673,5 +795,9 @@ async function loadData() {
     }
 }
 
-// Initialize application.
+
+// ==================================================
+// Initialize application
+// ==================================================
+
 loadData();

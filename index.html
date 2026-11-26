@@ -286,6 +286,39 @@
           </div>
         </details>
       </section>
+      <section aria-labelledby="geography-heading">
+        <h2 id="geography-heading">Geographical connections</h2>
+        <label for="geography-series">Lecture series</label>
+        <select id="geography-series" disabled>
+          <option value="all">All lecture series</option>
+        </select>
+        <p id="geography-total" role="status">Lecture records: –</p>
+        <div class="table-container" role="region" aria-labelledby="geography-heading" tabindex="0">
+          <table aria-describedby="geography-note">
+            <caption>Lecture records by geographical connection type</caption>
+            <thead><tr>
+              <th scope="col">Connection type</th>
+              <th scope="col">Lecture records</th>
+              <th scope="col">Share</th>
+            </tr></thead>
+            <tbody id="geography-table"></tbody>
+          </table>
+        </div>
+        <p id="geography-note" class="analysis-note">Shares use all lecture records in the selected scope, including canceled records. Connection types may overlap. Institutional affiliations do not establish actual travel.</p>
+        <details>
+          <summary>Method and data quality</summary>
+          <p class="analysis-note">Each affiliation city is compared with the host locations recorded for its lecture series. Local (same city) takes precedence over national (same country); otherwise international connections are classified by the affiliation country's continent. Each type is counted at most once per lecture record. Missing or unresolved geography may prevent classification.</p>
+          <dl class="statistics">
+            <div><dt>No resolved host city</dt><dd id="geography-no-host">–</dd></div>
+            <div><dt>No affiliation ID</dt><dd id="geography-no-id">–</dd></div>
+            <div><dt>Unresolved affiliation ID</dt><dd id="geography-unresolved">–</dd></div>
+            <div><dt>Incomplete affiliation geography</dt><dd id="geography-incomplete">–</dd></div>
+            <div><dt>No known connection</dt><dd id="geography-no-known">–</dd></div>
+            <div><dt>Multiple connection types</dt><dd id="geography-multiple">–</dd></div>
+          </dl>
+          <p class="analysis-note">These counts refer to lecture records. Flags may overlap with each other and with classified connections.</p>
+        </details>
+      </section>
     </main>
   </body>
 </html>
