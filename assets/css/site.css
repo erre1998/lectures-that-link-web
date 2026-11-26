@@ -121,3 +121,25 @@ main > section[data-analysis-view="formats"] select { width: 100%; }
     .gender-marker { fill: Canvas; }
     .chart-bar { background: Highlight; forced-color-adjust: none; }
 }
+
+/* Affiliations: directly labelled shares on a fixed 0–100% scale. */
+.affiliation-chart { margin: 1rem 0; min-width: 0; }
+.affiliation-chart[hidden] { display: none; }
+.share-axis { display: flex; justify-content: space-between; margin: .75rem 0 .2rem; color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.share-bars { list-style: none; margin: 0; padding: 0; }
+.share-bars li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .2rem .75rem; margin: .65rem 0; }
+.share-label { overflow-wrap: anywhere; }
+.share-value { font-variant-numeric: tabular-nums; text-align: right; }
+.share-track { grid-column: 1 / -1; position: relative; height: .85rem; background: var(--surface); border: 1px solid var(--muted); }
+.share-bar { display: block; height: 100%; background: var(--chart-blue); }
+.affiliation-chart p:empty { display: none; }
+main > section[data-analysis-view="affiliations"] { min-width: 0; }
+main > section[data-analysis-view="affiliations"] select { max-width: 100%; font: inherit; padding: .5rem; border: 1px solid var(--muted); background: var(--background); color: var(--text); border-radius: 4px; }
+@media (min-width: 900px) {
+    main:has(> #analysis-views:not([hidden])):has(> section[data-analysis-view="affiliations"]:not([hidden])) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 2rem; align-items: start; }
+    main:has(> #analysis-views:not([hidden])):has(> section[data-analysis-view="affiliations"]:not([hidden])) > :not(section) { grid-column: 1 / -1; }
+}
+@media (forced-colors: active) {
+    .share-track { border-color: CanvasText; }
+    .share-bar { background: Highlight; forced-color-adjust: none; }
+}

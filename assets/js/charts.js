@@ -130,16 +130,90 @@
         byId("gender-per-year").closest("details").open = false;
     }
 
+    // Both affiliation charts display the original XSLT shares, not a new analysis.
+    const percentage = new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 1 });
+    const institutionLabels = new Map([
+        ["university", "University"],
+        ["research_institution", "Research institution"],
+        ["glam", "GLAM"],
+        ["company", "Company"],
+        ["other", "Other"],
+        ["self-employment", "Self-employment"]
+    ]);
+
+    function affiliationChart(prefix, analysis, field, label, limit = Infinity) {
+        const select = byId(`${prefix}-series`);
+        const list = byId(`${prefix}-chart`);
+        const message = byId(`${prefix}-chart-message`);
+        const valid = summary => summary && count(summary.total) &&
+            Array.isArray(summary[field]) && summary[field].every(e =>
+                e && typeof label(e) === "string" && count(e.lectures) &&
+                e.lectures <= summary.total && (summary.total === 0
+                    ? e.share === null
+                    : Number.isFinite(e.share) && e.share >= 0 && e.share <= 1));
+        if (!analysis || !valid(analysis.overall) || !Array.isArray(analysis.perSeries) ||
+            !analysis.perSeries.every(e => valid(e) && typeof e.seriesId === "string")) {
+            throw new Error(`Invalid ${prefix} chart data.`);
+        }
+        const summaries = new Map([["all", analysis.overall],
+            ...analysis.perSeries.map(e => [`series:${e.seriesId}`, e])]);
+
+        function render() {
+            const summary = summaries.get(select.value);
+            if (!summary) return;
+            // Sorting and limiting are display operations only. Keep all data in the table.
+            const available = summary[field].filter(e => limit === Infinity || e.lectures > 0);
+            const entries = [...available].sort((a, b) =>
+                b.lectures - a.lectures || label(a).localeCompare(label(b), "en")
+            ).slice(0, limit);
+            const rows = document.createDocumentFragment();
+            for (const entry of summary.total ? entries : []) {
+                const row = document.createElement("li");
+                const name = document.createElement("span");
+                name.className = "share-label";
+                name.textContent = label(entry);
+                const value = document.createElement("span");
+                value.className = "share-value";
+                value.textContent = `${number.format(entry.lectures)} · ${percentage.format(entry.share)}`;
+                const track = document.createElement("span");
+                track.className = "share-track";
+                track.setAttribute("aria-hidden", "true");
+                const bar = document.createElement("span");
+                bar.className = "share-bar";
+                bar.style.width = `${entry.share * 100}%`;
+                track.append(bar);
+                row.append(name, value, track);
+                rows.append(row);
+            }
+            list.replaceChildren(rows);
+            message.textContent = summary.total === 0 ? "No lecture records in this selection. Shares are undefined."
+                : !entries.length ? "No recorded disciplines in this selection."
+                : limit !== Infinity ? `Showing ${number.format(entries.length)} of ${number.format(available.length)} recorded disciplines. The data table contains the full distribution.` : "";
+        }
+        select.addEventListener("change", render);
+        render();
+        byId(`${prefix}-visualization`).hidden = false;
+        byId(prefix === "institution" ? "institution-type-table" : "discipline-table").closest("details").open = false;
+    }
+
     async function init() {
         try {
             const response = await fetch("./data/analyses.json");
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
-            speakerChart(data.speakerAnalysis?.lecturesPerSpeakerDistribution);
-            genderChart(data.genderPerYear);
+            // Independent chart failures must not suppress other visualizations.
+            const tasks = [
+                () => speakerChart(data.speakerAnalysis?.lecturesPerSpeakerDistribution),
+                () => genderChart(data.genderPerYear),
+                () => affiliationChart("institution", data.institutionTypeAnalysis, "types", e => institutionLabels.get(e.type)),
+                () => affiliationChart("discipline", data.disciplineAnalysis, "disciplines", e => e.label || e.id, 10)
+            ];
+            for (const task of tasks) {
+                try { task(); } catch (error) { console.error("Unable to render chart.", error); }
+            }
         } catch (error) {
             // Tables and other existing analyses remain available via app.js.
-            console.error("Unable to load People charts.", error);
+            console.error("Unable to load analysis charts.", error);
         }
     }
     init();

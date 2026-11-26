@@ -268,18 +268,27 @@
           <option value="all">All lecture series</option>
         </select>
         <p id="institution-total" role="status">Lecture records: –</p>
-        <div class="table-container" role="region"
-             aria-labelledby="institution-heading" tabindex="0">
-          <table aria-describedby="institution-note">
-            <caption>Lecture records by affiliation institution type</caption>
-            <thead><tr>
-              <th scope="col">Institution type</th>
-              <th scope="col">Lecture records</th>
-              <th scope="col">Share</th>
-            </tr></thead>
-            <tbody id="institution-type-table"></tbody>
-          </table>
+        <div id="institution-visualization" class="affiliation-chart" hidden>
+          <p class="chart-scale">Share of all lecture records in the selected scope · scale: 0–100%</p>
+          <div class="share-axis" aria-hidden="true"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+          <ul id="institution-chart" class="share-bars" aria-label="Institution types: lecture records and shares"></ul>
+          <p id="institution-chart-message" class="analysis-note" role="status"></p>
         </div>
+        <details class="chart-data" open>
+          <summary>Data table</summary>
+          <div class="table-container" role="region"
+               aria-labelledby="institution-heading" tabindex="0">
+            <table aria-describedby="institution-note">
+              <caption>Lecture records by affiliation institution type</caption>
+              <thead><tr>
+                <th scope="col">Institution type</th>
+                <th scope="col">Lecture records</th>
+                <th scope="col">Share</th>
+              </tr></thead>
+              <tbody id="institution-type-table"></tbody>
+            </table>
+          </div>
+        </details>
         <p id="institution-note" class="analysis-note">Each institution type is counted at most once per lecture record. Shares use all lecture records in the selected scope, including canceled records. Types may overlap.</p>
         <details>
           <summary>Data quality and multiple assignments</summary>
@@ -299,19 +308,28 @@
         <select id="discipline-series" disabled>
           <option value="all">All lecture series</option>
         </select>
-        <label><input type="checkbox" id="discipline-show-zero" disabled> Show disciplines with zero records</label>
         <p id="discipline-total" role="status">Lecture records: –</p>
-        <div class="table-container" role="region" aria-labelledby="discipline-heading" tabindex="0">
-          <table aria-describedby="discipline-note">
-            <caption>Lecture records by annotated discipline</caption>
-            <thead><tr>
-              <th scope="col">Discipline</th>
-              <th scope="col">Lecture records</th>
-              <th scope="col">Share</th>
-            </tr></thead>
-            <tbody id="discipline-table"></tbody>
-          </table>
+        <div id="discipline-visualization" class="affiliation-chart" hidden>
+          <p class="chart-scale">Share of all lecture records in the selected scope · scale: 0–100%</p>
+          <div class="share-axis" aria-hidden="true"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+          <ul id="discipline-chart" class="share-bars" aria-label="Top 10 recorded disciplines: lecture records and shares"></ul>
+          <p id="discipline-chart-message" class="analysis-note" role="status"></p>
         </div>
+        <details class="chart-data" open>
+          <summary>Data table</summary>
+          <label><input type="checkbox" id="discipline-show-zero" disabled> Show disciplines with zero records in the table</label>
+          <div class="table-container" role="region" aria-labelledby="discipline-heading" tabindex="0">
+            <table aria-describedby="discipline-note">
+              <caption>Lecture records by annotated discipline</caption>
+              <thead><tr>
+                <th scope="col">Discipline</th>
+                <th scope="col">Lecture records</th>
+                <th scope="col">Share</th>
+              </tr></thead>
+              <tbody id="discipline-table"></tbody>
+            </table>
+          </div>
+        </details>
         <p id="discipline-note" class="analysis-note">Each resolved discipline is counted at most once per lecture record. Shares use all lecture records in the selected scope, including canceled records. Categories may overlap. Zero counts are hidden by default.</p>
         <details>
           <summary>Data quality and multiple assignments</summary>
