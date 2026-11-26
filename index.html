@@ -4,18 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lectures that Link</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="app.js" defer></script>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/site.css">
+    <script src="assets/js/site.js" defer></script>
+    <script src="assets/js/app.js" defer></script>
   </head>
   <body>
     <header>
       <h1>Lectures that Link</h1>
+      <nav class="site-nav" aria-label="Main navigation">
+        <a href="index.html" aria-current="page">Explore</a>
+        <a href="team.html">Project team</a>
+        <a href="publications.html">Publications</a>
+      </nav>
       <p id="dataset-version">Dataset: v0.8</p>
     </header>
     <main id="main-content">
-      <section aria-labelledby="overview-heading">
+      <div id="analysis-views" class="analysis-views" role="group" aria-label="Analysis views" hidden>
+        <button type="button" data-analysis-target="overview" aria-pressed="false">Overview</button>
+        <button type="button" data-analysis-target="formats" aria-pressed="false">Formats</button>
+        <button type="button" data-analysis-target="series" aria-pressed="false">Series</button>
+        <button type="button" data-analysis-target="people" aria-pressed="false">People</button>
+        <button type="button" data-analysis-target="affiliations" aria-pressed="false">Affiliations</button>
+        <button type="button" data-analysis-target="geography" aria-pressed="false">Geography</button>
+        <button type="button" data-analysis-target="topics" aria-pressed="false">Topics</button>
+      </div>
+      <p id="status" role="status">Loading data…</p>
+      <section data-analysis-view="overview" aria-labelledby="overview-heading">
         <h2 id="overview-heading">Corpus overview</h2>
-        <p id="status" role="status">Loading data…</p>
         <dl class="statistics">
           <div><dt>Lecture series</dt><dd id="count-series">–</dd></div>
           <div><dt>Terms</dt><dd id="count-terms">–</dd></div>
@@ -31,7 +47,7 @@
         </dl>
         <p class="analysis-note">Lecture records include canceled lectures. Speaker counts refer to distinct TEI IDs. Institution and geographical counts refer to resolved register entries; virtual places are excluded from city counts.</p>
       </section>
-      <section aria-labelledby="year-heading">
+      <section data-analysis-view="formats" aria-labelledby="year-heading">
         <h2 id="year-heading">Lecture delivery per year</h2>
         <div class="annual-chart">
           <label for="delivery-category">Chart category</label>
@@ -66,7 +82,7 @@
         <p class="analysis-note" id="delivery-note">Totals include canceled lectures. Format categories may overlap.</p>
         <p id="undated-lectures"></p>
       </section>
-      <section aria-labelledby="audience-heading">
+      <section data-analysis-view="formats" aria-labelledby="audience-heading">
         <h2 id="audience-heading">Audience participation per year</h2>
         <div class="annual-chart">
           <label for="audience-category">Chart category</label>
@@ -103,7 +119,7 @@
         <p class="analysis-note" id="audience-note">Counts refer to lecture records, not audience members. Totals include canceled lectures. Format categories may overlap.</p>
       </section>
 
-      <section aria-labelledby="structure-heading">
+      <section data-analysis-view="series" aria-labelledby="structure-heading">
         <h2 id="structure-heading">Lecture series structure</h2>
 
         <h3 id="terms-heading">Terms per lecture series</h3>
@@ -149,7 +165,7 @@
           Only observed counts are shown; omitted counts have zero frequency.</p>
       </section>
 
-      <section aria-labelledby="speaker-heading">
+      <section data-analysis-view="people" aria-labelledby="speaker-heading">
         <h2 id="speaker-heading">Lectures per speaker</h2>
         <dl class="statistics">
           <div><dt>Speaker–lecture assignments</dt><dd id="speaker-assignments">–</dd></div>
@@ -172,7 +188,7 @@
         <p id="speaker-note" class="analysis-note">Each speaker ID is counted once per lecture record. Joint and canceled lectures are included. Unresolved IDs remain in the distribution. Only observed counts are shown.</p>
       </section>
 
-      <section aria-labelledby="gender-heading">
+      <section data-analysis-view="people" aria-labelledby="gender-heading">
         <h2 id="gender-heading">Gender distribution per year</h2>
         <div class="table-container" role="region"
              aria-labelledby="gender-heading" tabindex="0">
@@ -214,7 +230,7 @@
         </details>
       </section>
 
-      <section aria-labelledby="institution-heading">
+      <section data-analysis-view="affiliations" aria-labelledby="institution-heading">
         <h2 id="institution-heading">Institutional affiliations</h2>
         <label for="institution-series">Lecture series</label>
         <select id="institution-series" disabled>
@@ -246,7 +262,7 @@
           <p class="analysis-note">These counts refer to lecture records. Flags may overlap with each other and with known types.</p>
         </details>
       </section>
-      <section aria-labelledby="discipline-heading">
+      <section data-analysis-view="affiliations" aria-labelledby="discipline-heading">
         <h2 id="discipline-heading">Disciplinary distribution</h2>
         <label for="discipline-series">Lecture series</label>
         <select id="discipline-series" disabled>
@@ -286,7 +302,7 @@
           </div>
         </details>
       </section>
-      <section aria-labelledby="geography-heading">
+      <section data-analysis-view="geography" aria-labelledby="geography-heading">
         <h2 id="geography-heading">Geographical connections</h2>
         <label for="geography-series">Lecture series</label>
         <select id="geography-series" disabled>
@@ -319,7 +335,7 @@
           <p class="analysis-note">These counts refer to lecture records. Flags may overlap with each other and with classified connections.</p>
         </details>
       </section>
-      <section aria-labelledby="topic-heading">
+      <section data-analysis-view="topics" aria-labelledby="topic-heading">
         <h2 id="topic-heading">LLM-generated topics</h2>
         <label for="topic-series">Lecture series</label>
         <select id="topic-series" disabled>
@@ -365,5 +381,8 @@
         </details>
       </section>
     </main>
+    <footer id="site-footer" class="site-footer">
+      <p><a href="https://github.com/erre1998/lectures-that-link-web#citation">How to cite</a> · <a href="https://github.com/erre1998/lectures-that-link">Data and research software</a> · <a href="https://github.com/erre1998/lectures-that-link-web">Web application</a></p>
+    </footer>
   </body>
 </html>

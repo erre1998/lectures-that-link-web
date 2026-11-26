@@ -1,4 +1,3 @@
-
 name: Build and deploy Lectures that Link
 
 on:
@@ -55,8 +54,10 @@ jobs:
       - name: Prepare website
         run: |
           mkdir -p _site/data
-          cp index.html app.js style.css _site/
+          cp index.html team.html publications.html footer.html _site/
+          cp -r assets _site/
           cp data/lectures.json data/analyses.json _site/data/
+          git log -1 --format=%cs > _site/last-updated.txt
 
       - name: Upload website
         uses: actions/upload-pages-artifact@v4
