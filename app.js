@@ -1,6 +1,8 @@
 const format = new Intl.NumberFormat("en");
 
+
 // Overview statistics
+
 function renderOverview(data) {
     document.getElementById("dataset-version").textContent =
         `Dataset: ${data.datasetVersion}`;
@@ -16,7 +18,8 @@ function renderOverview(data) {
 }
 
 
-// Display precomputed XSLT results without recalculating the statistics.
+// Annual statistics tables
+
 function renderAnnualTable(id, entries, fields) {
     const tbody = document.getElementById(id);
     const rows = document.createDocumentFragment();
@@ -42,7 +45,8 @@ function renderAnnualTable(id, entries, fields) {
 }
 
 
-// Visualize precomputed counts using a common scale for both charts.
+// Interactive annual charts
+
 function setupAnnualChart(prefix, entries, maximum) {
     const select = document.getElementById(`${prefix}-category`);
     const list = document.getElementById(`${prefix}-chart`);
@@ -101,7 +105,114 @@ function setupAnnualChart(prefix, entries, maximum) {
 }
 
 
-// Load analysis results
+// Frequency distributions
+
+function renderDistribution(
+    prefix,
+    entries,
+    categoryField,
+    frequencyField,
+    unit
+) {
+    const tbody = document.getElementById(`${prefix}-table`);
+    const chart = document.getElementById(`${prefix}-chart`);
+    const scale = document.getElementById(`${prefix}-scale`);
+
+    const tableRows = document.createDocumentFragment();
+    const chartRows = document.createDocumentFragment();
+
+    // The maximum controls only the visual scale,
+    // not the scientific analysis.
+
+    const maximum = Math.max(
+        0,
+        ...entries.map(entry => entry[frequencyField])
+    );
+
+    scale.textContent =
+        `Scale: 0–${format.format(maximum)} ${unit}`;
+
+    for (const entry of entries) {
+        const category = entry[categoryField];
+        const frequency = entry[frequencyField];
+
+
+        // Table row
+
+        const row = document.createElement("tr");
+
+        const heading = document.createElement("th");
+        heading.scope = "row";
+        heading.textContent = format.format(category);
+
+        const cell = document.createElement("td");
+        cell.textContent = format.format(frequency);
+
+        row.append(heading, cell);
+        tableRows.appendChild(row);
+
+
+        // Chart row
+
+        const item = document.createElement("li");
+
+        const label = document.createElement("span");
+        label.className = "chart-year";
+        label.textContent = format.format(category);
+
+        const track = document.createElement("span");
+        track.className = "chart-track";
+        track.setAttribute("aria-hidden", "true");
+
+        const bar = document.createElement("span");
+        bar.className = "chart-bar";
+        bar.style.width =
+            `${maximum > 0 ? frequency / maximum * 100 : 0}%`;
+
+        track.appendChild(bar);
+
+        const count = document.createElement("span");
+        count.className = "chart-value";
+        count.textContent = format.format(frequency);
+
+        item.append(label, track, count);
+        chartRows.appendChild(item);
+    }
+
+    tbody.replaceChildren(tableRows);
+    chart.replaceChildren(chartRows);
+}
+
+
+// Lecture series structure
+
+function renderSeriesStructure(structure) {
+
+    // Terms per lecture series
+
+    renderDistribution(
+        "terms-distribution",
+        structure.termsPerSeriesDistribution,
+        "terms",
+        "series",
+        "lecture series"
+    );
+
+
+    // Lectures per term
+
+    renderDistribution(
+        "lectures-distribution",
+        structure.lecturesPerTermDistribution,
+        "lectures",
+        "terms",
+        "terms"
+    );
+}
+
+
+// Load XSLT analysis results
+
 async function loadData() {
     const status = document.getElementById("status");
 
@@ -114,19 +225,40 @@ async function loadData() {
 
         const data = await response.json();
 
+
+        // Validate annual analysis results
+
         if (!Array.isArray(data.lecturesPerYear) ||
             !Array.isArray(data.audiencePerYear)) {
+
             throw new Error(
                 "Missing annual analysis results. Regenerate analyses.json."
             );
         }
 
 
+        // Validate lecture series structure results
+
+        if (!Array.isArray(
+                data.seriesStructure?.termsPerSeriesDistribution
+            ) ||
+            !Array.isArray(
+                data.seriesStructure?.lecturesPerTermDistribution
+            )) {
+
+            throw new Error(
+                "Missing series structure results. Regenerate analyses.json."
+            );
+        }
+
+
         // Overview
+
         renderOverview(data);
 
 
         // Lecture delivery table
+
         renderAnnualTable(
             "lectures-per-year",
             data.lecturesPerYear,
@@ -142,6 +274,7 @@ async function loadData() {
 
 
         // Audience participation table
+
         renderAnnualTable(
             "audience-per-year",
             data.audiencePerYear,
@@ -157,7 +290,8 @@ async function loadData() {
         );
 
 
-        // Common chart scale
+        // Common scale for annual charts
+
         const maximum = Math.max(
             0,
             ...data.lecturesPerYear.map(entry => entry.total),
@@ -165,7 +299,8 @@ async function loadData() {
         );
 
 
-        // Interactive charts
+        // Interactive annual charts
+
         setupAnnualChart(
             "delivery",
             data.lecturesPerYear,
@@ -179,9 +314,18 @@ async function loadData() {
         );
 
 
-        // Additional information
+        // Undated lectures
+
         document.getElementById("undated-lectures").textContent =
             `Undated lectures: ${format.format(data.undatedLectures)}`;
+
+
+        // Lecture series structure
+
+        renderSeriesStructure(data.seriesStructure);
+
+
+        // Success message
 
         status.textContent = "Data loaded successfully.";
 
@@ -193,4 +337,5 @@ async function loadData() {
 
 
 // Initialize application
+
 loadData();

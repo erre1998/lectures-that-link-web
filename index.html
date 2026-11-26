@@ -93,6 +93,52 @@
         </div>
         <p class="analysis-note" id="audience-note">Counts refer to lecture records, not audience members. Totals include canceled lectures. Format categories may overlap.</p>
       </section>
+
+      <section aria-labelledby="structure-heading">
+        <h2 id="structure-heading">Lecture series structure</h2>
+
+        <h3 id="terms-heading">Terms per lecture series</h3>
+        <div class="annual-chart">
+          <p id="terms-distribution-scale" class="chart-scale"></p>
+          <ul id="terms-distribution-chart" class="chart-bars"
+              aria-label="Number of lecture series by number of terms"></ul>
+        </div>
+        <div class="table-container" role="region"
+             aria-labelledby="terms-heading" tabindex="0">
+          <table>
+            <caption>Distribution of terms per lecture series</caption>
+            <thead>
+              <tr>
+                <th scope="col">Number of terms</th>
+                <th scope="col">Lecture series</th>
+              </tr>
+            </thead>
+            <tbody id="terms-distribution-table"></tbody>
+          </table>
+        </div>
+
+        <h3 id="term-lectures-heading">Lectures per term</h3>
+        <div class="annual-chart">
+          <p id="lectures-distribution-scale" class="chart-scale"></p>
+          <ul id="lectures-distribution-chart" class="chart-bars"
+              aria-label="Number of terms by number of lecture records"></ul>
+        </div>
+        <div class="table-container" role="region"
+             aria-labelledby="term-lectures-heading" tabindex="0">
+          <table>
+            <caption>Distribution of lecture records per term</caption>
+            <thead>
+              <tr>
+                <th scope="col">Number of lecture records</th>
+                <th scope="col">Terms</th>
+              </tr>
+            </thead>
+            <tbody id="lectures-distribution-table"></tbody>
+          </table>
+        </div>
+        <p class="analysis-note">Canceled lectures are included.
+          Only observed counts are shown; omitted counts have zero frequency.</p>
+      </section>
     </main>
   </body>
 </html>
