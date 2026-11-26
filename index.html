@@ -9,6 +9,7 @@
     <script src="assets/js/site.js" defer></script>
     <script src="assets/js/app.js" defer></script>
     <script src="assets/js/charts.js" defer></script>
+    <script src="assets/js/lectures.js" defer></script>
   </head>
   <body>
     <header>
@@ -29,6 +30,7 @@
         <button type="button" data-analysis-target="affiliations" aria-pressed="false">Affiliations</button>
         <button type="button" data-analysis-target="geography" aria-pressed="false">Geography</button>
         <button type="button" data-analysis-target="topics" aria-pressed="false">Topics</button>
+        <button type="button" data-analysis-target="lectures" aria-pressed="false">Lectures</button>
       </div>
       <p id="status" role="status">Loading data…</p>
       <section data-analysis-view="overview" aria-labelledby="overview-heading">
@@ -458,6 +460,35 @@
             <div><dt>Multiple matching topic areas</dt><dd id="topic-multiple">–</dd></div>
           </dl>
         </details>
+      </section>
+      <section data-analysis-view="lectures" aria-labelledby="lectures-heading">
+        <h2 id="lectures-heading">Lectures</h2>
+        <div class="lecture-results-head">
+          <p id="lecture-results-status" role="status" aria-atomic="true" tabindex="-1">Open this view to load lecture records.</p>
+          <span class="analysis-note">Newest first by recorded date</span>
+        </div>
+        <button type="button" id="lecture-retry" hidden>Retry loading lectures</button>
+        <div id="lecture-results-region" class="table-container lecture-results" role="region"
+             aria-labelledby="lectures-heading" tabindex="0" hidden>
+          <table aria-describedby="lecture-list-note">
+            <caption>Individual lecture records</caption>
+            <thead><tr>
+              <th scope="col">Date</th>
+              <th scope="col">Lecture</th>
+              <th scope="col">Speakers</th>
+              <th scope="col">Lecture series</th>
+              <th scope="col">Abstract</th>
+            </tr></thead>
+            <tbody id="lecture-results"></tbody>
+          </table>
+        </div>
+        <div id="lecture-pagination" class="lecture-pagination" role="group" aria-label="Lecture results pages" hidden>
+          <button type="button" id="lecture-prev" disabled>Previous</button>
+          <span id="lecture-page"></span>
+          <button type="button" id="lecture-next" disabled>Next</button>
+        </div>
+        <p id="lecture-list-note" class="analysis-note">Canceled records are included and marked. Dates retain their recorded precision. Unresolved speaker IDs are explicitly identified.</p>
+        <noscript><p>JavaScript is required to load individual lecture records.</p></noscript>
       </section>
     </main>
     <footer id="site-footer" class="site-footer">
