@@ -35,6 +35,13 @@
       counted once per lecture record, including canceled records. Multiple
       references are tokenized; unresolved local IDs are retained and flagged.
       Records without a usable local speaker ID are counted separately.
+    - Annual gender analysis counts lecture records with at least one
+      referenced speaker in each recorded gender category (female, male,
+      non-binary). Categories may overlap, including when a person has
+      multiple recorded categories. No gender is inferred from names.
+      Missing, unclassified and unresolved speaker metadata are reported
+      separately. Canceled records are included; undated records are
+      excluded from annual counts, as in the other annual analyses.
     - Other legacy analyses are retained but not executed by default.
   -->
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
@@ -180,6 +187,49 @@
     }"/>
   </xsl:function>
 
+  <!-- JSON successor to gender-per-year-plot. The unit is a lecture
+       record, not a unique speaker or an individual speaker assignment. -->
+  <xsl:function name="local:lecture-gender-record" as="map(*)">
+    <xsl:param name="lecture" as="element()"/>
+    <xsl:variable name="ids" select="local:speaker-ids($lecture)"/>
+    <xsl:variable name="registered" select="$persons[@xml:id = $ids]"/>
+    <xsl:variable name="categories" as="xs:string*"
+      select="distinct-values($registered/gender[. = ('female', 'male', 'non-binary')] ! string(.))"/>
+    <xsl:sequence select="map {
+      'year': xs:integer(substring($lecture/@when, 1, 4)),
+      'female': $categories = 'female',
+      'male': $categories = 'male',
+      'nonBinary': $categories = 'non-binary',
+      'multipleGenderCategories': count($categories) gt 1,
+      'withoutKnownGender': empty($categories),
+      'withoutSpeakerId': empty($ids),
+      'unresolvedSpeaker': exists($ids[not(. = $registered/@xml:id)]),
+      'unknownGender': exists($registered[not(gender = ('female', 'male', 'non-binary'))])
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:gender-per-year" as="map(*)*">
+    <xsl:param name="records" as="element()*"/>
+    <xsl:variable name="classified" as="map(*)*"
+      select="$records[matches(@when, '^[0-9]{4}')] ! local:lecture-gender-record(.)"/>
+    <xsl:for-each select="$years">
+      <xsl:variable name="year" select="."/>
+      <xsl:variable name="entries" select="$classified[?year = $year]"/>
+      <xsl:sequence select="map {
+        'year': $year,
+        'female': count($entries[?female]),
+        'male': count($entries[?male]),
+        'nonBinary': count($entries[?nonBinary]),
+        'multipleGenderCategories': count($entries[?multipleGenderCategories]),
+        'withoutKnownGender': count($entries[?withoutKnownGender]),
+        'withoutSpeakerId': count($entries[?withoutSpeakerId]),
+        'unresolvedSpeaker': count($entries[?unresolvedSpeaker]),
+        'unknownGender': count($entries[?unknownGender]),
+        'total': count($entries)
+      }"/>
+    </xsl:for-each>
+  </xsl:function>
+
   <xsl:template match="/">
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
@@ -198,7 +248,8 @@
       'lecturesPerYear': array { $annual },
       'audiencePerYear': array { $annual-audience },
       'seriesStructure': local:series-structure($lecture-series, $lecture-terms),
-      'speakerAnalysis': local:speaker-analysis($lectures)
+      'speakerAnalysis': local:speaker-analysis($lectures),
+      'genderPerYear': array { local:gender-per-year($lectures) }
     }"/>
   </xsl:template>
   
