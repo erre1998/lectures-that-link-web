@@ -17,12 +17,18 @@
     Adapted for Lectures that Link Web (2026-11-26).
 
     Methodological changes:
-    - Inclusion of all recorded lecture series
-    - Removal of fixed temporal restrictions
-    - Dynamic determination of the annual analysis range
-    - Retention of undated lectures in the general corpus; annual analyses exclude lectures without an evaluable year
+    - Inclusion of all recorded lecture series.
+    - Removal of fixed temporal restrictions.
+    - Dynamic determination of the annual analysis range.
+    - Retention of undated lectures in the general corpus.
+      Annual analyses exclude lectures without an evaluable year.
+    - Annual lecture counts exported as JSON; the original format
+      predicates are retained. Counts include canceled records.
+    - Unclassified and overlapping format assignments are reported.
+    - Other legacy analyses are retained but not executed by default.
   -->
-  
+  <xsl:output method="json" encoding="UTF-8" indent="yes"/>
+
   <xsl:variable name="lecture-series" select="//event[@type='lecture-series']"/>
   <xsl:variable name="lecture-terms" select="$lecture-series/event[@type='lecture-series-term']"/>
   <xsl:variable name="lectures" select="$lecture-terms/event[@type='lecture']"/>
@@ -80,32 +86,23 @@
   </xsl:function>
   
   <xsl:template match="/">
-    
-    <!--<xsl:call-template name="ls-structures-general"/>-->
-    <!--<xsl:call-template name="number-of-lectures"/>-->
-    <!--<xsl:call-template name="number-of-organizers"/>-->
-    <!--<xsl:call-template name="number-of-speakers"/>-->
-    <!--<xsl:call-template name="number-of-host-institutions"/>-->
-    <!--<xsl:call-template name="number-of-affiliation-institutions"/>-->
-    <!--<xsl:call-template name="number-of-host-cities"/>-->
-    <!--<xsl:call-template name="number-of-host-countries"/>-->
-    <!--<xsl:call-template name="number-of-affiliation-cities"/>-->
-    <!--<xsl:call-template name="number-of-affiliation-countries"/>-->
-    <!--<xsl:call-template name="lectures-per-speaker"/>-->
-    <!--<xsl:call-template name="ls-location-links-plot"/>-->
-    <!--<xsl:call-template name="ls-institution-types-plot"/>-->
-    <!--<xsl:call-template name="ls-disciplines"/>-->
-    <!--<xsl:call-template name="llm-topic-csv"/>-->
-    <!--<xsl:call-template name="llm-topic-analysis"/>-->
-    <!--<xsl:call-template name="lectures-per-year-plot"/>-->
-    
-    <xsl:call-template name="gender-per-year-plot"/>
-    
-    
+    <xsl:variable name="annual" as="map(*)*">
+      <xsl:call-template name="lectures-per-year"/>
+    </xsl:variable>
+    <xsl:sequence select="map {
+      'datasetVersion': normalize-space(string((//teiHeader/fileDesc/editionStmt/edition)[1])),
+      'counts': map {
+        'series': count($lecture-series),
+        'terms': count($lecture-terms),
+        'lectures': count($lectures)
+      },
+      'undatedLectures': count($lectures[not(matches(@when, '^[0-9]{4}'))]),
+      'lecturesPerYear': array { $annual }
+    }"/>
   </xsl:template>
   
   <xsl:template name="llm-topic-analysis">
-     <xsl:result-document href="../analyses/llm-topics-plot.html">
+     <xsl:result-document href="../analyses/llm-topics-plot.html" method="html">
         <html>
           <head>
             <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
@@ -192,7 +189,7 @@
 </xsl:text>
       </xsl:for-each-group>
     </xsl:result-document>
-    <xsl:result-document href="../analyses/lectures-per-speaker-plot.html">
+    <xsl:result-document href="../analyses/lectures-per-speaker-plot.html" method="html">
       <html>
         <head>
           <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
@@ -244,7 +241,7 @@
   <xsl:template name="ls-disciplines">
     <xsl:for-each select="$lecture-series">
       <xsl:variable name="ls-id" select="@xml:id"/>
-      <xsl:result-document href="../analyses/ls-disciplines-{$ls-id}.html">
+      <xsl:result-document href="../analyses/ls-disciplines-{$ls-id}.html" method="html">
         <html>
           <head>
             <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
@@ -287,7 +284,7 @@
     </xsl:for-each>
     
     
-    <xsl:result-document href="../analyses/ls-disciplines-overview.html">
+    <xsl:result-document href="../analyses/ls-disciplines-overview.html" method="html">
       <html>
         <head>
           <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
@@ -330,7 +327,7 @@
   </xsl:template>
   
   <xsl:template name="ls-institution-types-plot">
-    <xsl:result-document href="../analyses/ls-institution-types-plot.html">
+    <xsl:result-document href="../analyses/ls-institution-types-plot.html" method="html">
       <html>
         <head>
           <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
@@ -424,7 +421,7 @@
   </xsl:template>
   
   <xsl:template name="ls-location-links-plot">
-    <xsl:result-document href="../analyses/ls-location-links-plot.html">
+    <xsl:result-document href="../analyses/ls-location-links-plot.html" method="html">
       <html>
         <head>
           <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
@@ -499,7 +496,7 @@
   </xsl:template>
   
   <xsl:template name="gender-per-year-plot">
-    <xsl:result-document href="../analyses/gender-per-year-plot.html">
+    <xsl:result-document href="../analyses/gender-per-year-plot.html" method="html">
       <html>
         <head>
           <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
@@ -555,61 +552,28 @@
     </xsl:result-document>
   </xsl:template>
   
-  <xsl:template name="lectures-per-year-plot">
-    <xsl:result-document href="../analyses/lectures-per-year-plot.html">
-      <html>
-        <head>
-          <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
-        </head>
-        <body>
-          <table>
-            <tr>
-              <td><div id="myDiv" style="width:600px;height:400px;"/></td>
-            </tr>
-          </table>
-          <script>
-            var trace1 = {
-            y: [<xsl:for-each select="$years">
-              <xsl:value-of select="count($lectures[number(substring(@when,1,4))=current()][.//term[@type='speech']='in person'])"/>
-              <xsl:if test="position()!=last()">,</xsl:if>
-            </xsl:for-each>],
-            x: [<xsl:value-of select="string-join($years,',')"/>],
-            type: 'bar',
-            name: 'in person'
-            };
-            
-            var trace2 = {
-            y: [<xsl:for-each select="$years">
-              <xsl:value-of select="count($lectures[number(substring(@when,1,4))=current()][.//term[@type='speech']='online'])"/>
-              <xsl:if test="position()!=last()">,</xsl:if>
-            </xsl:for-each>],
-            x: [<xsl:value-of select="string-join($years,',')"/>],
-            type: 'bar',
-            name: 'online'
-            };
-            
-            var trace3 = {
-            y: [<xsl:for-each select="$years">
-              <xsl:value-of select="count($lectures[number(substring(@when,1,4))=current()][.//term[@type='speech']='canceled'])"/>
-              <xsl:if test="position()!=last()">,</xsl:if>
-            </xsl:for-each>],
-            x: [<xsl:value-of select="string-join($years,',')"/>],
-            type: 'bar',
-            name: 'canceled'
-            };
-            
-            
-            var data = [trace1,trace2,trace3];
-            var layout = {
-            barmode: "stack",
-            yaxis: {title: {text: "number of lectures"}}
-            };
-            
-            Plotly.newPlot('myDiv', data, layout);
-          </script>
-        </body>
-      </html>
-    </xsl:result-document>
+  <!-- Annual lecture records by year and format.
+       Counts preserve the original existential TEI format predicates.
+       Multiple matching categories can overlap; total counts records once. -->
+  <xsl:template name="lectures-per-year" as="map(*)*">
+    <xsl:variable name="formats" as="xs:string*"
+      select="('in person', 'online', 'canceled')"/>
+    <xsl:for-each select="$years">
+      <xsl:variable name="year" select="."/>
+      <xsl:variable name="annual-lectures"
+        select="$lectures[matches(@when, '^[0-9]{4}')]
+                         [number(substring(@when, 1, 4)) = $year]"/>
+      <xsl:sequence select="map {
+        'year': $year,
+        'inPerson': count($annual-lectures[.//term[@type='speech']='in person']),
+        'online': count($annual-lectures[.//term[@type='speech']='online']),
+        'canceled': count($annual-lectures[.//term[@type='speech']='canceled']),
+        'otherOrUnknown': count($annual-lectures[not(.//term[@type='speech']=$formats)]),
+        'multipleFormats': count($annual-lectures[
+          count(distinct-values(.//term[@type='speech'][.=$formats])) gt 1]),
+        'total': count($annual-lectures)
+      }"/>
+    </xsl:for-each>
   </xsl:template>
   
   <xsl:template name="number-of-affiliation-countries">
@@ -677,7 +641,7 @@
   </xsl:template>
   
   <xsl:template name="ls-structures-general">
-    <xsl:result-document href="../analyses/ls-structure-plot.html">
+    <xsl:result-document href="../analyses/ls-structure-plot.html" method="html">
       <html>
         <head>
           <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8"/>
