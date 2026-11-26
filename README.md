@@ -8,8 +8,8 @@ The web application complements the original research repository by making its d
 
 This repository distinguishes between software and research data:
 
-- **Software**: [GNU General Public License Version 3 (GPL-3.0)](https://www.gnu.org/licenses/gpl-3.0.html). This includes the adapted XSLT analysis code; its original authorship and provenance are retained in the source file. See [LICENSE](LICENSE).
-- **Data**: [Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/), as specified by the original research repository.
+- **Software**: Licensed under the [GNU General Public License Version 3 (GPL-3.0)](https://www.gnu.org/licenses/gpl-3.0.html).  
+- **Data**: Licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Citation
 
