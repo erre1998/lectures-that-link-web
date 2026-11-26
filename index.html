@@ -1,19 +1,32 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lectures that Link</title>
+    <script src="app.js" defer></script>
   </head>
   <body>
     <header>
       <h1>Lectures that Link</h1>
+      <p id="dataset-version">Dataset: v0.8</p>
     </header>
     
     <main id="main-content">
-      <h2>Data exploration</h2>
-      <p>Dataset: v0.8</p>
+      <h2>Overview</h2>
+      
+      <p id="status" role="status">Loading data…</p>
+      
+      <dl>
+        <dt>Lecture series</dt>
+        <dd id="count-series">–</dd>
+        
+        <dt>Terms</dt>
+        <dd id="count-terms">–</dd>
+        
+        <dt>Lectures</dt>
+        <dd id="count-lectures">–</dd>
+      </dl>
     </main>
   </body>
 </html>
