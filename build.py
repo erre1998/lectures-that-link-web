@@ -13,6 +13,7 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parent
 SOURCE_URL = 'https://raw.githubusercontent.com/erre1998/lectures-that-link/v0.8/dh-lecture-series.xml'
 OUTPUT = ROOT / 'data' / 'lectures.json'
+XML_OUTPUT = ROOT / 'data' / 'dh-lecture-series.xml'
 T = '{http://www.tei-c.org/ns/1.0}'
 XML_ID = '{http://www.w3.org/XML/1998/namespace}id'
 
@@ -42,10 +43,16 @@ def main() -> None:
     parser.add_argument("--source", type=Path, help="Optional local copy of the v0.8 XML file")
     args = parser.parse_args()
     if args.source:
-        root = ET.parse(args.source).getroot()
+        xml_data = args.source.read_bytes()
     else:
         with urlopen(SOURCE_URL, timeout=60) as response:
-            root = ET.parse(response).getroot()
+            xml_data = response.read()
+
+    # Parse and save the same XML bytes for the subsequent XSLT transformation.
+    root = ET.fromstring(xml_data)
+    XML_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    XML_OUTPUT.write_bytes(xml_data)
+    print(f'XML source: {XML_OUTPUT}')
     version = content(root.find(f'./{T}teiHeader/{T}fileDesc/{T}editionStmt/{T}edition'))
     persons = {
         p.get(XML_ID): name_of(p)
