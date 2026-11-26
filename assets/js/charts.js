@@ -130,7 +130,7 @@
         byId("gender-per-year").closest("details").open = false;
     }
 
-    // Both affiliation charts display the original XSLT shares, not a new analysis.
+    // Share charts display the original XSLT shares, not a new analysis.
     const percentage = new Intl.NumberFormat("en", { style: "percent", maximumFractionDigits: 1 });
     const institutionLabels = new Map([
         ["university", "University"],
@@ -141,8 +141,16 @@
         ["self-employment", "Self-employment"]
     ]);
 
-    function affiliationChart(prefix, analysis, field, label, limit = Infinity) {
-        const select = byId(`${prefix}-series`);
+    const geographyLabels = new Map([
+        ["local", "Local"], ["national", "National"],
+        ["European", "European"], ["other continents", "Other continents"]
+    ]);
+
+    function shareChart(prefix, analysis, field, label, {
+        limit = Infinity, selector = prefix, tableId = null,
+        noun = "categories", rank = true
+    } = {}) {
+        const select = byId(`${selector}-series`);
         const list = byId(`${prefix}-chart`);
         const message = byId(`${prefix}-chart-message`);
         const valid = summary => summary && count(summary.total) &&
@@ -163,11 +171,12 @@
             if (!summary) return;
             // Sorting and limiting are display operations only. Keep all data in the table.
             const available = summary[field].filter(e => limit === Infinity || e.lectures > 0);
-            const entries = [...available].sort((a, b) =>
-                b.lectures - a.lectures || label(a).localeCompare(label(b), "en")
-            ).slice(0, limit);
+            const entries = [...available];
+            if (rank) entries.sort((a, b) =>
+                b.lectures - a.lectures || label(a).localeCompare(label(b), "en"));
+            const displayed = entries.slice(0, limit);
             const rows = document.createDocumentFragment();
-            for (const entry of summary.total ? entries : []) {
+            for (const entry of summary.total ? displayed : []) {
                 const row = document.createElement("li");
                 const name = document.createElement("span");
                 name.className = "share-label";
@@ -187,13 +196,13 @@
             }
             list.replaceChildren(rows);
             message.textContent = summary.total === 0 ? "No lecture records in this selection. Shares are undefined."
-                : !entries.length ? "No recorded disciplines in this selection."
-                : limit !== Infinity ? `Showing ${number.format(entries.length)} of ${number.format(available.length)} recorded disciplines. The data table contains the full distribution.` : "";
+                : !displayed.length ? `No recorded ${noun} in this selection.`
+                : limit !== Infinity ? `Showing ${number.format(displayed.length)} of ${number.format(available.length)} recorded ${noun}. The data table contains the full distribution.` : "";
         }
         select.addEventListener("change", render);
         render();
         byId(`${prefix}-visualization`).hidden = false;
-        byId(prefix === "institution" ? "institution-type-table" : "discipline-table").closest("details").open = false;
+        if (tableId) byId(tableId).closest("details").open = false;
     }
 
     async function init() {
@@ -205,8 +214,11 @@
             const tasks = [
                 () => speakerChart(data.speakerAnalysis?.lecturesPerSpeakerDistribution),
                 () => genderChart(data.genderPerYear),
-                () => affiliationChart("institution", data.institutionTypeAnalysis, "types", e => institutionLabels.get(e.type)),
-                () => affiliationChart("discipline", data.disciplineAnalysis, "disciplines", e => e.label || e.id, 10)
+                () => shareChart("institution", data.institutionTypeAnalysis, "types", e => institutionLabels.get(e.type), { tableId: "institution-type-table" }),
+                () => shareChart("discipline", data.disciplineAnalysis, "disciplines", e => e.label || e.id, { limit: 10, tableId: "discipline-table", noun: "disciplines" }),
+                () => shareChart("geography", data.geographicalAnalysis, "connections", e => geographyLabels.get(e.type), { tableId: "geography-table", rank: false }),
+                () => shareChart("topic-area", data.topicAnalysis, "topicAreas", e => e.label, { selector: "topic", tableId: "topic-area-table", rank: false }),
+                () => shareChart("topic-top", data.topicAnalysis, "topics", e => e.topic, { selector: "topic", limit: 10, noun: "topics" })
             ];
             for (const task of tasks) {
                 try { task(); } catch (error) { console.error("Unable to render chart.", error); }
