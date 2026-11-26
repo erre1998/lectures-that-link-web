@@ -17,21 +17,23 @@
     Adapted for Lectures that Link Web (2026-11-26).
 
     Methodological changes:
-    
-    - Inclusion of all recorded lecture series
-    - Removal of fixed temporal restrictions
-    - Dynamic determination of the annual analysis range
-    - Retention of undated lectures in the general corpus
-      Annual analyses exclude lectures without an evaluable year
+    - Inclusion of all recorded lecture series.
+    - Removal of fixed temporal restrictions.
+    - Dynamic determination of the annual analysis range.
+    - Retention of undated lectures in the general corpus.
+      Annual analyses exclude lectures without an evaluable year.
     - Annual lecture counts exported as JSON; the original format
-      predicates are retained. Counts include canceled records
-    - Unclassified and overlapping format assignments are reported
-    - Annual audience participation is analyzed separately from speech
+      predicates are retained. Counts include canceled records.
+    - Unclassified and overlapping format assignments are reported.
+    - Annual audience participation is analyzed separately from speech.
       Canceled records without an audience term are reported separately;
-      other unclassified records and multiple recognized categories are counted
-    - Other legacy analyses are retained but not executed by default
-    
+      other unclassified records and multiple recognized categories are counted.
+    - Series structure exported as per-series and per-term counts and
+      frequency distributions. All recorded terms and lectures are included,
+      including canceled records; counts of zero are retained if present.
+    - Other legacy analyses are retained but not executed by default.
   -->
+  
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
 
   <xsl:variable name="lecture-series" select="//event[@type='lecture-series']"/>
@@ -90,6 +92,48 @@
     </xsl:for-each>
   </xsl:function>
   
+  <!-- JSON successor to the counting logic of ls-structures-general. -->
+  <xsl:function name="local:series-structure" as="map(*)">
+    <xsl:param name="series" as="element()*"/>
+    <xsl:param name="terms" as="element()*"/>
+
+    <xsl:variable name="series-counts" as="map(*)*"
+      select="for $s in $series
+              return map {
+                'seriesId': string($s/@xml:id),
+                'seriesName': normalize-space(string(($s/eventName[@xml:lang='en'], $s/eventName)[1])),
+                'terms': count($s/event[@type='lecture-series-term'])
+              }"/>
+
+    <xsl:variable name="term-counts" as="map(*)*"
+      select="for $t in $terms
+              return map {
+                'seriesId': string($t/parent::event/@xml:id),
+                'termId': string($t/@xml:id),
+                'termName': normalize-space(string(($t/eventName[@xml:lang='en'], $t/eventName)[1])),
+                'lectures': count($t/event[@type='lecture'])
+              }"/>
+
+    <xsl:sequence select="map {
+      'termsPerSeries': array { $series-counts },
+      'lecturesPerTerm': array { $term-counts },
+      'termsPerSeriesDistribution': array {
+        for $n in sort(distinct-values($series-counts?terms))
+        return map {
+          'terms': $n,
+          'series': count($series-counts[?terms = $n])
+        }
+      },
+      'lecturesPerTermDistribution': array {
+        for $n in sort(distinct-values($term-counts?lectures))
+        return map {
+          'lectures': $n,
+          'terms': count($term-counts[?lectures = $n])
+        }
+      }
+    }"/>
+  </xsl:function>
+
   <xsl:template match="/">
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
@@ -106,7 +150,8 @@
       },
       'undatedLectures': count($lectures[not(matches(@when, '^[0-9]{4}'))]),
       'lecturesPerYear': array { $annual },
-      'audiencePerYear': array { $annual-audience }
+      'audiencePerYear': array { $annual-audience },
+      'seriesStructure': local:series-structure($lecture-series, $lecture-terms)
     }"/>
   </xsl:template>
   
