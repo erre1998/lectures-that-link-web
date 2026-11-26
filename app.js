@@ -1,60 +1,41 @@
+
 const format = new Intl.NumberFormat("en");
-
-
-// ==================================================
-// Corpus overview
-// ==================================================
 
 function renderOverview(data) {
     document.getElementById("dataset-version").textContent =
         `Dataset: ${data.datasetVersion}`;
-
     document.getElementById("count-series").textContent =
         format.format(data.counts.series);
-
     document.getElementById("count-terms").textContent =
         format.format(data.counts.terms);
-
     document.getElementById("count-lectures").textContent =
         format.format(data.counts.lectures);
 
     document.getElementById("count-speakers").textContent =
         format.format(data.speakerAnalysis.uniqueSpeakers);
-
     document.getElementById("count-organizers").textContent =
         format.format(data.corpusOverview.organizers.registeredPersons);
-
     document.getElementById("count-host-institutions").textContent =
         format.format(data.corpusOverview.hostInstitutions.registeredInstitutions);
-
     document.getElementById("count-affiliation-institutions").textContent =
         format.format(data.corpusOverview.affiliationInstitutions.registeredInstitutions);
-
     document.getElementById("count-host-cities").textContent =
         format.format(data.corpusOverview.hostGeography.cities);
-
     document.getElementById("count-host-countries").textContent =
         format.format(data.corpusOverview.hostGeography.countries);
-
     document.getElementById("count-affiliation-cities").textContent =
         format.format(data.corpusOverview.affiliationGeography.cities);
-
     document.getElementById("count-affiliation-countries").textContent =
         format.format(data.corpusOverview.affiliationGeography.countries);
 }
 
-
-// ==================================================
-// Generic analysis tables
-// ==================================================
-
+// Display precomputed XSLT results without recalculating the statistics.
 function renderTable(id, entries, headingField, fields) {
     const tbody = document.getElementById(id);
     const rows = document.createDocumentFragment();
 
     for (const entry of entries) {
         const row = document.createElement("tr");
-
         const heading = document.createElement("th");
         heading.scope = "row";
         heading.textContent = entry[headingField];
@@ -65,25 +46,18 @@ function renderTable(id, entries, headingField, fields) {
             cell.textContent = format.format(entry[field]);
             row.appendChild(cell);
         }
-
         rows.appendChild(row);
     }
-
     tbody.replaceChildren(rows);
 }
 
-
-// ==================================================
-// Interactive annual charts
-// ==================================================
-
+// Visualize precomputed counts using a common scale for both charts.
 function setupAnnualChart(prefix, entries, maximum) {
     const select = document.getElementById(`${prefix}-category`);
     const list = document.getElementById(`${prefix}-chart`);
     const scale = document.getElementById(`${prefix}-scale`);
 
-    scale.textContent =
-        `Scale: 0–${format.format(maximum)} lecture records`;
+    scale.textContent = `Scale: 0–${format.format(maximum)} lecture records`;
 
     function render() {
         const field = select.value;
@@ -104,9 +78,7 @@ function setupAnnualChart(prefix, entries, maximum) {
 
             const bar = document.createElement("span");
             bar.className = "chart-bar";
-            bar.style.width =
-                `${maximum > 0 ? value / maximum * 100 : 0}%`;
-
+            bar.style.width = `${maximum > 0 ? value / maximum * 100 : 0}%`;
             track.appendChild(bar);
 
             const count = document.createElement("span");
@@ -119,73 +91,42 @@ function setupAnnualChart(prefix, entries, maximum) {
 
         list.setAttribute(
             "aria-label",
-            `${prefix === "delivery"
-                ? "Lecture delivery"
-                : "Audience participation"}: ${category} by year`
+            `${prefix === "delivery" ? "Lecture delivery" : "Audience participation"}: ${category} by year`
         );
-
         list.replaceChildren(rows);
     }
 
     select.addEventListener("change", render);
-
     render();
-
     select.disabled = false;
 }
 
-
-// ==================================================
-// Frequency distributions
-// ==================================================
-
-function renderDistribution(
-    prefix,
-    entries,
-    categoryField,
-    frequencyField,
-    unit
-) {
+// Display frequency distributions calculated by XSLT.
+function renderDistribution(prefix, entries, categoryField, frequencyField, unit) {
     const tbody = document.getElementById(`${prefix}-table`);
     const chart = document.getElementById(`${prefix}-chart`);
     const scale = document.getElementById(`${prefix}-scale`);
-
     const tableRows = document.createDocumentFragment();
     const chartRows = document.createDocumentFragment();
 
-    // The maximum controls only the visual scale,
-    // not the scientific analysis.
-
-    const maximum = Math.max(
-        0,
-        ...entries.map(entry => entry[frequencyField])
-    );
-
-    scale.textContent =
-        `Scale: 0–${format.format(maximum)} ${unit}`;
+    // The maximum controls only the visual scale, not the analysis.
+    const maximum = Math.max(0, ...entries.map(entry => entry[frequencyField]));
+    scale.textContent = `Scale: 0–${format.format(maximum)} ${unit}`;
 
     for (const entry of entries) {
         const category = entry[categoryField];
         const frequency = entry[frequencyField];
 
-        // Table row
-
         const row = document.createElement("tr");
-
         const heading = document.createElement("th");
         heading.scope = "row";
         heading.textContent = format.format(category);
-
         const cell = document.createElement("td");
         cell.textContent = format.format(frequency);
-
         row.append(heading, cell);
         tableRows.appendChild(row);
 
-        // Chart row
-
         const item = document.createElement("li");
-
         const label = document.createElement("span");
         label.className = "chart-year";
         label.textContent = format.format(category);
@@ -196,9 +137,7 @@ function renderDistribution(
 
         const bar = document.createElement("span");
         bar.className = "chart-bar";
-        bar.style.width =
-            `${maximum > 0 ? frequency / maximum * 100 : 0}%`;
-
+        bar.style.width = `${maximum > 0 ? frequency / maximum * 100 : 0}%`;
         track.appendChild(bar);
 
         const count = document.createElement("span");
@@ -213,37 +152,22 @@ function renderDistribution(
     chart.replaceChildren(chartRows);
 }
 
-
-// ==================================================
-// Lecture series structure
-// ==================================================
-
 function renderSeriesStructure(structure) {
-
     renderDistribution(
         "terms-distribution",
         structure.termsPerSeriesDistribution,
-        "terms",
-        "series",
-        "lecture series"
+        "terms", "series", "lecture series"
     );
 
     renderDistribution(
         "lectures-distribution",
         structure.lecturesPerTermDistribution,
-        "lectures",
-        "terms",
-        "terms"
+        "lectures", "terms", "terms"
     );
 }
 
-
-// ==================================================
-// Speaker analysis
-// ==================================================
-
+// Speaker frequency and data quality, precomputed in XSLT.
 function renderSpeakerAnalysis(analysis) {
-
     document.getElementById("speaker-assignments").textContent =
         format.format(analysis.speakerLectureAssignments);
 
@@ -261,11 +185,39 @@ function renderSpeakerAnalysis(analysis) {
     );
 }
 
+// Annual gender counts and metadata quality, precomputed in XSLT.
+const genderFields = [
+    "female",
+    "male",
+    "nonBinary",
+    "multipleGenderCategories",
+    "withoutKnownGender",
+    "total"
+];
 
-// ==================================================
-// Load and validate XSLT analysis results
-// ==================================================
+const genderQualityFields = [
+    "withoutSpeakerId",
+    "unresolvedSpeaker",
+    "unknownGender"
+];
 
+function renderGenderAnalysis(entries) {
+    renderTable(
+        "gender-per-year",
+        entries,
+        "year",
+        genderFields
+    );
+
+    renderTable(
+        "gender-quality-per-year",
+        entries,
+        "year",
+        genderQualityFields
+    );
+}
+
+// Load and validate XSLT analysis results.
 async function loadData() {
     const status = document.getElementById("status");
 
@@ -278,9 +230,7 @@ async function loadData() {
 
         const data = await response.json();
 
-
-        // Validate annual analysis results
-
+        // Validate annual analysis results.
         if (!Array.isArray(data.lecturesPerYear) ||
             !Array.isArray(data.audiencePerYear)) {
 
@@ -289,9 +239,7 @@ async function loadData() {
             );
         }
 
-
-        // Validate lecture series structure results
-
+        // Validate lecture series structure.
         if (!Array.isArray(
                 data.seriesStructure?.termsPerSeriesDistribution
             ) ||
@@ -304,9 +252,7 @@ async function loadData() {
             );
         }
 
-
-        // Validate corpus overview
-
+        // Validate corpus overview.
         const overview = data.corpusOverview;
 
         const overviewCounts = [
@@ -321,17 +267,14 @@ async function loadData() {
         ];
 
         if (!overviewCounts.every(
-                value => Number.isInteger(value) && value >= 0
-            )) {
-
+            value => Number.isInteger(value) && value >= 0
+        )) {
             throw new Error(
                 "Missing or invalid corpus overview. Regenerate analyses.json."
             );
         }
 
-
-        // Validate speaker analysis
-
+        // Validate speaker analysis.
         const speaker = data.speakerAnalysis;
 
         if (!Array.isArray(
@@ -357,14 +300,30 @@ async function loadData() {
             );
         }
 
+        // Validate annual gender analysis.
+        const gender = data.genderPerYear;
 
-        // Corpus overview
+        if (!Array.isArray(gender) ||
+            !gender.every(entry =>
+                entry &&
+                Number.isInteger(entry.year) &&
+                [...genderFields, ...genderQualityFields].every(
+                    field =>
+                        Number.isInteger(entry[field]) &&
+                        entry[field] >= 0 &&
+                        entry[field] <= entry.total
+                )
+            )) {
 
+            throw new Error(
+                "Missing or invalid gender analysis. Regenerate analyses.json."
+            );
+        }
+
+        // Corpus overview.
         renderOverview(data);
 
-
-        // Lecture delivery table
-
+        // Lecture delivery.
         renderTable(
             "lectures-per-year",
             data.lecturesPerYear,
@@ -379,9 +338,7 @@ async function loadData() {
             ]
         );
 
-
-        // Audience participation table
-
+        // Audience participation.
         renderTable(
             "audience-per-year",
             data.audiencePerYear,
@@ -397,17 +354,12 @@ async function loadData() {
             ]
         );
 
-
-        // Common scale for annual charts
-
+        // Common scale for annual charts.
         const maximum = Math.max(
             0,
             ...data.lecturesPerYear.map(entry => entry.total),
             ...data.audiencePerYear.map(entry => entry.total)
         );
-
-
-        // Interactive annual charts
 
         setupAnnualChart(
             "delivery",
@@ -421,29 +373,21 @@ async function loadData() {
             maximum
         );
 
-
-        // Undated lectures
-
         document.getElementById("undated-lectures").textContent =
             `Undated lectures: ${format.format(data.undatedLectures)}`;
 
-
-        // Lecture series structure
-
+        // Lecture series structure.
         renderSeriesStructure(data.seriesStructure);
 
-
-        // Speaker analysis
-
+        // Speaker analysis.
         renderSpeakerAnalysis(speaker);
 
-
-        // Success message
+        // Annual gender analysis.
+        renderGenderAnalysis(gender);
 
         status.textContent = "Data loaded successfully.";
 
     } catch (error) {
-
         status.textContent =
             "Unable to load the analysis results.";
 
@@ -451,9 +395,5 @@ async function loadData() {
     }
 }
 
-
-// ==================================================
-// Initialize application
-// ==================================================
-
+// Initialize application.
 loadData();
