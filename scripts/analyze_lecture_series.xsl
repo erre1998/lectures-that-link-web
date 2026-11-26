@@ -6,21 +6,35 @@
   xpath-default-namespace="http://www.tei-c.org/ns/1.0"
   version="3.0">
   
-  <!-- author of this script: Ulrike Henny-Krahmer -->
+  <!--
+    Original author: Ulrike Henny-Krahmer
+
+    Source: Lectures that Link, release v0.8
+    https://github.com/erre1998/lectures-that-link/blob/v0.8/scripts/analyze_lecture_series.xsl
+    Original Git blob: 592a6eb163bb6ff9ff20a74b39ddf226f740fa05
+    License: GPL-3.0
+
+    Adapted for Lectures that Link Web (2026-11-26).
+
+    Methodological changes:
+    - Inclusion of all recorded lecture series
+    - Removal of fixed temporal restrictions
+    - Dynamic determination of the annual analysis range
+    - Retention of undated lectures in the general corpus; annual analyses exclude lectures without an evaluable year
+  -->
   
-  <xsl:variable name="lecture-series-data-completed" 
-    select="('ls1','ls3','ls4','ls5','ls6','ls8','ls9','ls10',
-    'ls11','ls12','ls13','ls14','ls15','ls16','ls17','ls18','ls19',
-    'ls20','ls21','ls22','ls23','ls24','ls25','ls26','ls27','ls29',
-    'ls30','ls31','ls33','ls34')"/>
-  
-  <!-- collect the completed data within our temporal scope: -->
-  <xsl:variable name="lecture-series" select="//event[@type='lecture-series'][@xml:id=$lecture-series-data-completed]"/>
-  <xsl:variable name="lecture-terms" select="$lecture-series/event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+  <xsl:variable name="lecture-series" select="//event[@type='lecture-series']"/>
+  <xsl:variable name="lecture-terms" select="$lecture-series/event[@type='lecture-series-term']"/>
   <xsl:variable name="lectures" select="$lecture-terms/event[@type='lecture']"/>
   <xsl:variable name="places" select="//settingDesc//place"/>
   <xsl:variable name="institutions" select="//particDesc//org"/>
-  <xsl:variable name="years" select="2014 to 2025"/>
+  <xsl:variable name="lecture-years" as="xs:integer*"
+    select="for $lecture in $lectures[matches(@when, '^[0-9]{4}')]
+            return xs:integer(substring($lecture/@when, 1, 4))"/>
+  <xsl:variable name="years" as="xs:integer*"
+    select="if (exists($lecture-years))
+            then min($lecture-years) to max($lecture-years)
+            else ()"/>
   <xsl:variable name="persons" select="//particDesc//person"/>
   <xsl:variable name="persons-female" select="$persons[gender='female']"/>
   <xsl:variable name="persons-male" select="$persons[gender='male']"/>
@@ -105,7 +119,7 @@
             <script>
               var trace1 = {
               y: [<xsl:for-each select="$lecture-series">
-                <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+                <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
                 <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
                 <xsl:value-of select="count($terms/event[@type='lecture'][.//term[@type='topics-llm'][contains(normalize-space(.),'cultural heritage') or contains(normalize-space(.),'digitization')]]) div count($terms/event[@type='lecture'])"/>
                 <xsl:if test="position()!=last()">,</xsl:if>
@@ -116,7 +130,7 @@
               
               var trace2 = {
               y: [<xsl:for-each select="$lecture-series">
-                <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+                <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
                 <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
                 <xsl:value-of select="count($terms/event[@type='lecture'][.//term[@type='topics-llm'][contains(normalize-space(.),'edition') or contains(normalize-space(.),'editing') or contains(normalize-space(.),'editorial')]]) div count($terms/event[@type='lecture'])"/>
                 <xsl:if test="position()!=last()">,</xsl:if>
@@ -127,7 +141,7 @@
               
               var trace3 = {
               y: [<xsl:for-each select="$lecture-series">
-                <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+                <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
                 <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
                 <xsl:value-of select="count($terms/event[@type='lecture'][.//term[@type='topics-llm'][contains(normalize-space(.),'analysis')]]) div count($terms/event[@type='lecture'])"/>
                 <xsl:if test="position()!=last()">,</xsl:if>
@@ -138,7 +152,7 @@
               
               var trace4 = {
               y: [<xsl:for-each select="$lecture-series">
-                <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+                <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
                 <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
                 <xsl:value-of select="count($terms/event[@type='lecture'][.//term[@type='topics-llm'][contains(normalize-space(.),'machine learning') or contains(normalize-space(.),'ai') or contains(normalize-space(.),'artificial intelligence') or contains(normalize-space(.),'llm')]]) div count($terms/event[@type='lecture'])"/>
                 <xsl:if test="position()!=last()">,</xsl:if>
@@ -330,7 +344,7 @@
           <script>
             var trace1 = {
             y: [<xsl:for-each select="$lecture-series">
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-type(.)='university']) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
@@ -341,7 +355,7 @@
             
             var trace2 = {
             y: [<xsl:for-each select="$lecture-series">
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-type(.)='research_institution']) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
@@ -352,7 +366,7 @@
             
             var trace3 = {
             y: [<xsl:for-each select="$lecture-series">
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-type(.)='glam']) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
@@ -363,7 +377,7 @@
             
             var trace4 = {
             y: [<xsl:for-each select="$lecture-series">
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-type(.)='company']) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
@@ -375,7 +389,7 @@
             
             var trace5 = {
             y: [<xsl:for-each select="$lecture-series">
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-type(.)='other']) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
@@ -386,7 +400,7 @@
             
             var trace6 = {
             y: [<xsl:for-each select="$lecture-series">
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:variable name="lectures" select="$terms/event[@type='lecture']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-type(.)='self-employment']) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
@@ -425,7 +439,7 @@
             var trace1 = {
             y: [<xsl:for-each select="$lecture-series">
               <xsl:variable name="ls-cities" select="tokenize(translate(@where,'#',''),'\s')"/>
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-city(.)=$ls-cities]) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
             </xsl:for-each>],
@@ -437,7 +451,7 @@
             y: [<xsl:for-each select="$lecture-series">
               <xsl:variable name="ls-cities" select="tokenize(translate(@where,'#',''),'\s')"/>
               <xsl:variable name="ls-countries" select="local:get-countries-for-cities($ls-cities)"/>
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-city(.)!=$ls-cities][local:get-countries-for-cities(local:get-affiliation-city(.))=$ls-countries]) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
             </xsl:for-each>],
@@ -450,7 +464,7 @@
               <xsl:variable name="ls-cities" select="tokenize(translate(@where,'#',''),'\s')"/>
               <xsl:variable name="ls-countries" select="local:get-countries-for-cities($ls-cities)"/>
               <xsl:variable name="ls-continents" select="local:get-continents-for-countries($ls-countries)"/>
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-city(.)!=$ls-cities][local:get-countries-for-cities(local:get-affiliation-city(.))!=$ls-countries][local:get-continents-for-countries(local:get-countries-for-cities(local:get-affiliation-city(.)))='europe']) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
             </xsl:for-each>],
@@ -463,7 +477,7 @@
               <xsl:variable name="ls-cities" select="tokenize(translate(@where,'#',''),'\s')"/>
               <xsl:variable name="ls-countries" select="local:get-countries-for-cities($ls-cities)"/>
               <xsl:variable name="ls-continents" select="local:get-continents-for-countries($ls-countries)"/>
-              <xsl:variable name="terms" select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]"/>
+              <xsl:variable name="terms" select="event[@type='lecture-series-term']"/>
               <xsl:value-of select="count($terms/event[@type='lecture'][local:get-affiliation-city(.)!=$ls-cities][local:get-countries-for-cities(local:get-affiliation-city(.))!=$ls-countries][local:get-continents-for-countries(local:get-countries-for-cities(local:get-affiliation-city(.)))!='europe']) div count($terms/event[@type='lecture'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
             </xsl:for-each>],
@@ -659,7 +673,7 @@
   </xsl:template>
   
   <xsl:template name="number-of-lectures">
-    <xsl:value-of select="count($lecture-series/event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]/event[@type='lecture'])"/>
+    <xsl:value-of select="count($lecture-series/event[@type='lecture-series-term']/event[@type='lecture'])"/>
   </xsl:template>
   
   <xsl:template name="ls-structures-general">
@@ -678,7 +692,7 @@
           <script>
             var trace1 = {
             y: [<xsl:for-each select="$lecture-series">
-              <xsl:value-of select="count(event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025])"/>
+              <xsl:value-of select="count(event[@type='lecture-series-term'])"/>
               <xsl:if test="position()!=last()">,</xsl:if>
             </xsl:for-each>],
             type: 'box',
@@ -694,7 +708,7 @@
             
             var trace2 = {
             y: [<xsl:for-each select="$lecture-series">
-              <xsl:for-each select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]">
+              <xsl:for-each select="event[@type='lecture-series-term']">
                 <xsl:value-of select="count(event[@type='lecture'])"/>
                 <xsl:if test="position()!=last()">,</xsl:if>
               </xsl:for-each>
@@ -719,9 +733,9 @@
     <xsl:result-document href="../analyses/ls-structure_terms-per-series.csv" method="text">
       <xsl:text>series-id,number-of-terms</xsl:text><xsl:text>
 </xsl:text>
-      <xsl:for-each select="//event[@type='lecture-series'][@xml:id=$lecture-series-data-completed]">
+      <xsl:for-each select="//event[@type='lecture-series']">
         <xsl:value-of select="@xml:id"/><xsl:text>,</xsl:text>
-        <xsl:value-of select="count(event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025])"/>
+        <xsl:value-of select="count(event[@type='lecture-series-term'])"/>
         <xsl:if test="position()!=last()"><xsl:text>
 </xsl:text></xsl:if>
       </xsl:for-each>
@@ -731,8 +745,8 @@
     <xsl:result-document href="../analyses/ls-structure_lectures-per-term.csv" method="text">
       <xsl:text>series-id,term-id,number-of-lectures</xsl:text><xsl:text>
 </xsl:text>
-      <xsl:for-each select="//event[@type='lecture-series'][@xml:id=$lecture-series-data-completed]">
-        <xsl:for-each select="event[@type='lecture-series-term'][2013 &lt; number(substring(@from,1,4))][number(substring(@from,1,4)) &lt; 2025]">
+      <xsl:for-each select="//event[@type='lecture-series']">
+        <xsl:for-each select="event[@type='lecture-series-term']">
           <xsl:value-of select="parent::event[@type='lecture-series']/@xml:id"/><xsl:text>,</xsl:text>
           <xsl:value-of select="@xml:id"/><xsl:text>,</xsl:text>
           <xsl:value-of select="count(event[@type='lecture'])"/>
