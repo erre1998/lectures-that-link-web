@@ -4,7 +4,7 @@ async function loadSiteFooter() {
     if (!footer) return;
 
     try {
-        const response = await fetch("./partials/footer.html");
+        const response = await fetch("./footer.html");
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const template = document.createElement("template");
         template.innerHTML = await response.text();

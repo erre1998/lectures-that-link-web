@@ -54,3 +54,26 @@
 .footer-institutions a { display: inline-flex; max-width: 100%; align-items: center; }
 .footer-institutions img { max-width: min(200px, 100%); max-height: 44px; }
 .footer-institutions a:last-child img { max-width: min(110px, 100%); }
+
+/* Compare annual counts on a common scale without duplicating visible tables. */
+main > section[data-analysis-view="formats"] { min-width: 0; }
+main > section[data-analysis-view="formats"] h2 { margin: 0 0 .5rem; }
+main > section[data-analysis-view="formats"] .annual-chart { margin: 1rem 0; }
+main > section[data-analysis-view="formats"] select { width: 100%; }
+.chart-data { margin: .75rem 0; }
+.chart-data > summary { cursor: pointer; color: var(--accent); font-weight: 600; padding: .35rem 0; }
+.chart-data .table-container { max-width: 100%; }
+
+/* On smaller screens, or without script-enabled view navigation, stack the charts. */
+@media (min-width: 900px) {
+    main:has(> #analysis-views:not([hidden])):has(> section[data-analysis-view="formats"]:not([hidden])) {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 2rem;
+        align-items: start;
+    }
+    main:has(> #analysis-views:not([hidden])):has(> section[data-analysis-view="formats"]:not([hidden])) > :not(section) {
+        grid-column: 1 / -1;
+    }
+    main > section[data-analysis-view="formats"] h2 { min-height: 2.6em; }
+}
