@@ -2,9 +2,7 @@
 
 This repository contains the web application for the research project **“Lectures that Link”**, which analyzes European lecture series as nodes of interaction within the Digital Humanities (DH) community.
 
-The web application complements the [original research repository](https://github.com/erre1998/lectures-that-link) by making its data and quantitative analyses accessible through a browser-based interface. The underlying research data and scripts remain the work of the Lectures that Link project and its contributors.
-
-The web application is developed and maintained by Erik Renz.
+The web application complements the [original research repository](https://github.com/erre1998/lectures-that-link) by making its data and quantitative analyses accessible through a browser-based interface.
 
 ## License
 
@@ -25,7 +23,7 @@ If you use the underlying research data or analytical results, please also cite 
 
 ## Use of Generative AI
 
-[ChatGPT](https://chatgpt.com/) (OpenAI, GPT-6.2; 2026) was used as a supporting tool during the development of the web application, particularly for code generation, revision, debugging, and technical documentation. All AI-generated contributions are subject to critical review and testing by the author, who retains responsibility for the conceptual design, methodological decisions, and implementation.
+ChatGPT (OpenAI, GPT-6.2; 2026) was used as a supporting tool during the development of the web application, e. g. for code revision, debugging, and technical documentation. All AI-generated contributions are subject to critical review and testing by the author, who retains responsibility for the conceptual design, methodological decisions, and implementation.
 
 ## Project Status
 
