@@ -14,12 +14,12 @@ function renderOverview(data) {
         format.format(data.counts.lectures);
 }
 
-function renderLecturesPerYear(data) {
-    const tbody = document.getElementById("lectures-per-year");
+// Display precomputed XSLT results without recalculating the statistics.
+function renderAnnualTable(id, entries, fields) {
+    const tbody = document.getElementById(id);
+    const rows = document.createDocumentFragment();
 
-    tbody.replaceChildren();
-
-    for (const entry of data.lecturesPerYear) {
+    for (const entry of entries) {
         const row = document.createElement("tr");
 
         const heading = document.createElement("th");
@@ -27,26 +27,16 @@ function renderLecturesPerYear(data) {
         heading.textContent = entry.year;
         row.appendChild(heading);
 
-        const values = [
-            entry.inPerson,
-            entry.online,
-            entry.canceled,
-            entry.otherOrUnknown,
-            entry.multipleFormats,
-            entry.total
-        ];
-
-        for (const value of values) {
+        for (const field of fields) {
             const cell = document.createElement("td");
-            cell.textContent = format.format(value);
+            cell.textContent = format.format(entry[field]);
             row.appendChild(cell);
         }
 
-        tbody.appendChild(row);
+        rows.appendChild(row);
     }
 
-    document.getElementById("undated-lectures").textContent =
-        `Undated lectures: ${format.format(data.undatedLectures)}`;
+    tbody.replaceChildren(rows);
 }
 
 async function loadData() {
@@ -61,8 +51,44 @@ async function loadData() {
 
         const data = await response.json();
 
+        if (!Array.isArray(data.lecturesPerYear) ||
+            !Array.isArray(data.audiencePerYear)) {
+            throw new Error(
+                "Missing annual analysis results. Regenerate analyses.json."
+            );
+        }
+
         renderOverview(data);
-        renderLecturesPerYear(data);
+
+        renderAnnualTable(
+            "lectures-per-year",
+            data.lecturesPerYear,
+            [
+                "inPerson",
+                "online",
+                "canceled",
+                "otherOrUnknown",
+                "multipleFormats",
+                "total"
+            ]
+        );
+
+        renderAnnualTable(
+            "audience-per-year",
+            data.audiencePerYear,
+            [
+                "inPerson",
+                "online",
+                "hybrid",
+                "canceledWithoutAudience",
+                "otherOrUnknown",
+                "multipleFormats",
+                "total"
+            ]
+        );
+
+        document.getElementById("undated-lectures").textContent =
+            `Undated lectures: ${format.format(data.undatedLectures)}`;
 
         status.textContent = "Data loaded successfully.";
 

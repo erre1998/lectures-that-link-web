@@ -17,15 +17,20 @@
     Adapted for Lectures that Link Web (2026-11-26).
 
     Methodological changes:
-    - Inclusion of all recorded lecture series.
-    - Removal of fixed temporal restrictions.
-    - Dynamic determination of the annual analysis range.
-    - Retention of undated lectures in the general corpus.
-      Annual analyses exclude lectures without an evaluable year.
+    
+    - Inclusion of all recorded lecture series
+    - Removal of fixed temporal restrictions
+    - Dynamic determination of the annual analysis range
+    - Retention of undated lectures in the general corpus
+      Annual analyses exclude lectures without an evaluable year
     - Annual lecture counts exported as JSON; the original format
-      predicates are retained. Counts include canceled records.
-    - Unclassified and overlapping format assignments are reported.
-    - Other legacy analyses are retained but not executed by default.
+      predicates are retained. Counts include canceled records
+    - Unclassified and overlapping format assignments are reported
+    - Annual audience participation is analyzed separately from speech
+      Canceled records without an audience term are reported separately;
+      other unclassified records and multiple recognized categories are counted
+    - Other legacy analyses are retained but not executed by default
+    
   -->
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
 
@@ -89,6 +94,9 @@
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
     </xsl:variable>
+    <xsl:variable name="annual-audience" as="map(*)*">
+      <xsl:call-template name="audience-per-year"/>
+    </xsl:variable>
     <xsl:sequence select="map {
       'datasetVersion': normalize-space(string((//teiHeader/fileDesc/editionStmt/edition)[1])),
       'counts': map {
@@ -97,7 +105,8 @@
         'lectures': count($lectures)
       },
       'undatedLectures': count($lectures[not(matches(@when, '^[0-9]{4}'))]),
-      'lecturesPerYear': array { $annual }
+      'lecturesPerYear': array { $annual },
+      'audiencePerYear': array { $annual-audience }
     }"/>
   </xsl:template>
   
@@ -576,6 +585,35 @@
     </xsl:for-each>
   </xsl:template>
   
+  <!-- Audience participation is independent of lecture delivery.
+       The unit of analysis is a lecture record, not an audience member.
+       Recognized categories are counted by presence, and may overlap. -->
+  <xsl:template name="audience-per-year" as="map(*)*">
+    <xsl:variable name="formats" as="xs:string*"
+      select="('in person', 'online', 'hybrid')"/>
+    <xsl:for-each select="$years">
+      <xsl:variable name="year" select="."/>
+      <xsl:variable name="annual-lectures"
+        select="$lectures[matches(@when, '^[0-9]{4}')]
+                         [number(substring(@when, 1, 4)) = $year]"/>
+      <xsl:variable name="canceled-without-audience"
+        select="$annual-lectures[.//term[@type='speech']='canceled']
+                               [not(.//term[@type='audience'])]"/>
+      <xsl:sequence select="map {
+        'year': $year,
+        'inPerson': count($annual-lectures[.//term[@type='audience']='in person']),
+        'online': count($annual-lectures[.//term[@type='audience']='online']),
+        'hybrid': count($annual-lectures[.//term[@type='audience']='hybrid']),
+        'canceledWithoutAudience': count($canceled-without-audience),
+        'otherOrUnknown': count(($annual-lectures except $canceled-without-audience)
+                                [not(.//term[@type='audience']=$formats)]),
+        'multipleFormats': count($annual-lectures[
+          count(distinct-values(.//term[@type='audience'][.=$formats])) gt 1]),
+        'total': count($annual-lectures)
+      }"/>
+    </xsl:for-each>
+  </xsl:template>
+
   <xsl:template name="number-of-affiliation-countries">
     <xsl:variable name="countries" as="xs:string+">
       <xsl:for-each select="distinct-values($lectures//affiliation/tokenize(@corresp,'\s'))">
