@@ -1,7 +1,10 @@
+
 const format = new Intl.NumberFormat("en");
 
 
-// Overview statistics
+// ==================================================
+// Corpus overview
+// ==================================================
 
 function renderOverview(data) {
     document.getElementById("dataset-version").textContent =
@@ -15,10 +18,39 @@ function renderOverview(data) {
 
     document.getElementById("count-lectures").textContent =
         format.format(data.counts.lectures);
+
+    document.getElementById("count-speakers").textContent =
+        format.format(data.speakerAnalysis.uniqueSpeakers);
+
+    document.getElementById("count-organizers").textContent =
+        format.format(data.corpusOverview.organizers.registeredPersons);
+
+    document.getElementById("count-host-institutions").textContent =
+        format.format(data.corpusOverview.hostInstitutions.registeredInstitutions);
+
+    document.getElementById("count-affiliation-institutions").textContent =
+        format.format(data.corpusOverview.affiliationInstitutions.registeredInstitutions);
+
+    document.getElementById("count-host-cities").textContent =
+        format.format(data.corpusOverview.hostGeography.cities);
+
+    document.getElementById("count-host-countries").textContent =
+        format.format(data.corpusOverview.hostGeography.countries);
+
+    document.getElementById("count-affiliation-cities").textContent =
+        format.format(data.corpusOverview.affiliationGeography.cities);
+
+    document.getElementById("count-affiliation-countries").textContent =
+        format.format(data.corpusOverview.affiliationGeography.countries);
 }
 
 
+// ==================================================
 // Annual statistics tables
+// ==================================================
+
+// Display precomputed XSLT results without
+// recalculating the scientific statistics.
 
 function renderAnnualTable(id, entries, fields) {
     const tbody = document.getElementById(id);
@@ -45,7 +77,12 @@ function renderAnnualTable(id, entries, fields) {
 }
 
 
+// ==================================================
 // Interactive annual charts
+// ==================================================
+
+// Visualize precomputed counts using a common
+// scale for both annual charts.
 
 function setupAnnualChart(prefix, entries, maximum) {
     const select = document.getElementById(`${prefix}-category`);
@@ -105,7 +142,11 @@ function setupAnnualChart(prefix, entries, maximum) {
 }
 
 
+// ==================================================
 // Frequency distributions
+// ==================================================
+
+// Display frequency distributions calculated by XSLT.
 
 function renderDistribution(
     prefix,
@@ -184,7 +225,9 @@ function renderDistribution(
 }
 
 
+// ==================================================
 // Lecture series structure
+// ==================================================
 
 function renderSeriesStructure(structure) {
 
@@ -211,7 +254,9 @@ function renderSeriesStructure(structure) {
 }
 
 
-// Load XSLT analysis results
+// ==================================================
+// Load and validate XSLT analysis results
+// ==================================================
 
 async function loadData() {
     const status = document.getElementById("status");
@@ -252,7 +297,32 @@ async function loadData() {
         }
 
 
-        // Overview
+        // Validate corpus overview statistics
+
+        const overview = data.corpusOverview;
+
+        const overviewCounts = [
+            data.speakerAnalysis?.uniqueSpeakers,
+            overview?.organizers?.registeredPersons,
+            overview?.hostInstitutions?.registeredInstitutions,
+            overview?.affiliationInstitutions?.registeredInstitutions,
+            overview?.hostGeography?.cities,
+            overview?.hostGeography?.countries,
+            overview?.affiliationGeography?.cities,
+            overview?.affiliationGeography?.countries
+        ];
+
+        if (!overviewCounts.every(
+                value => Number.isInteger(value) && value >= 0
+            )) {
+
+            throw new Error(
+                "Missing or invalid corpus overview. Regenerate analyses.json."
+            );
+        }
+
+
+        // Render corpus overview
 
         renderOverview(data);
 
@@ -330,12 +400,17 @@ async function loadData() {
         status.textContent = "Data loaded successfully.";
 
     } catch (error) {
-        status.textContent = "Unable to load the analysis results.";
+
+        status.textContent =
+            "Unable to load the analysis results.";
+
         console.error(error);
     }
 }
 
 
+// ==================================================
 // Initialize application
+// ==================================================
 
 loadData();
