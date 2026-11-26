@@ -24,6 +24,19 @@
       </section>
       <section aria-labelledby="year-heading">
         <h2 id="year-heading">Lecture delivery per year</h2>
+        <div class="annual-chart">
+          <label for="delivery-category">Chart category</label>
+          <select id="delivery-category" disabled>
+            <option value="total">All lecture records</option>
+            <option value="inPerson">In person</option>
+            <option value="online">Online</option>
+            <option value="canceled">Canceled</option>
+            <option value="otherOrUnknown">Other or unknown</option>
+            <option value="multipleFormats">Multiple formats</option>
+          </select>
+          <p id="delivery-scale" class="chart-scale"></p>
+          <ul id="delivery-chart" class="chart-bars" aria-label="Lecture delivery per year"></ul>
+        </div>
         <div class="table-container" role="region" aria-labelledby="year-heading" tabindex="0">
           <table aria-describedby="delivery-note">
             <caption>Annual lecture records by delivery format</caption>
@@ -46,6 +59,20 @@
       </section>
       <section aria-labelledby="audience-heading">
         <h2 id="audience-heading">Audience participation per year</h2>
+        <div class="annual-chart">
+          <label for="audience-category">Chart category</label>
+          <select id="audience-category" disabled>
+            <option value="total">All lecture records</option>
+            <option value="inPerson">In person</option>
+            <option value="online">Online</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="canceledWithoutAudience">Canceled (no audience data)</option>
+            <option value="otherOrUnknown">Other or unknown</option>
+            <option value="multipleFormats">Multiple formats</option>
+          </select>
+          <p id="audience-scale" class="chart-scale"></p>
+          <ul id="audience-chart" class="chart-bars" aria-label="Audience participation per year"></ul>
+        </div>
         <div class="table-container" role="region" aria-labelledby="audience-heading" tabindex="0">
           <table aria-describedby="audience-note">
             <caption>Annual lecture records by audience participation format</caption>
