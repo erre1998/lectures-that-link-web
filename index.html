@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="assets/css/site.css">
     <script src="assets/js/site.js" defer></script>
     <script src="assets/js/app.js" defer></script>
+    <script src="assets/js/charts.js" defer></script>
   </head>
   <body>
     <header>
@@ -178,42 +179,66 @@
           <div><dt>Unresolved speaker IDs</dt><dd id="speaker-unresolved">–</dd></div>
           <div><dt>Lecture records without speaker ID</dt><dd id="speaker-missing">–</dd></div>
         </dl>
-        <div class="table-container" role="region"
-             aria-labelledby="speaker-heading" tabindex="0">
-          <table aria-describedby="speaker-note">
-            <caption>Distribution of lecture records per speaker ID</caption>
-            <thead>
-              <tr>
-                <th scope="col">Lecture records</th>
-                <th scope="col">Speaker IDs</th>
-              </tr>
-            </thead>
-            <tbody id="speaker-distribution-table"></tbody>
-          </table>
+        <div id="speaker-visualization" class="people-chart" hidden>
+          <p id="speaker-chart-scale" class="chart-scale"></p>
+          <ul id="speaker-chart" class="chart-bars" aria-label="Number of speaker IDs by lecture frequency"></ul>
         </div>
+        <details class="chart-data" open>
+          <summary>Data table</summary>
+          <div class="table-container" role="region"
+               aria-labelledby="speaker-heading" tabindex="0">
+            <table aria-describedby="speaker-note">
+              <caption>Distribution of lecture records per speaker ID</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Lecture records</th>
+                  <th scope="col">Speaker IDs</th>
+                </tr>
+              </thead>
+              <tbody id="speaker-distribution-table"></tbody>
+            </table>
+          </div>
+        </details>
         <p id="speaker-note" class="analysis-note">Each speaker ID is counted once per lecture record. Joint and canceled lectures are included. Unresolved IDs remain in the distribution. Only observed counts are shown.</p>
       </section>
 
       <section data-analysis-view="people" aria-labelledby="gender-heading">
         <h2 id="gender-heading">Gender distribution per year</h2>
-        <div class="table-container" role="region"
-             aria-labelledby="gender-heading" tabindex="0">
-          <table aria-describedby="gender-note">
-            <caption>Annual lecture records by recorded speaker gender</caption>
-            <thead>
-              <tr>
-                <th scope="col">Year</th>
-                <th scope="col">Female</th>
-                <th scope="col">Male</th>
-                <th scope="col">Non-binary</th>
-                <th scope="col">Multiple categories</th>
-                <th scope="col">No known gender</th>
-                <th scope="col">Total</th>
-              </tr>
-            </thead>
-            <tbody id="gender-per-year"></tbody>
-          </table>
+        <div id="gender-visualization" class="people-chart" hidden>
+          <fieldset id="gender-chart-controls" class="gender-controls">
+            <legend>Show categories</legend>
+            <label><input type="checkbox" value="female" checked> Female</label>
+            <label><input type="checkbox" value="male" checked> Male</label>
+            <label><input type="checkbox" value="nonBinary" checked> Non-binary</label>
+          </fieldset>
+          <p id="gender-chart-scale" class="chart-scale"></p>
+          <div class="gender-plot" role="region" aria-label="Gender trend chart; scroll horizontally if needed" tabindex="0">
+            <svg id="gender-chart" viewBox="0 0 720 300" role="img" aria-labelledby="gender-svg-title gender-svg-desc"></svg>
+          </div>
+          <ul id="gender-chart-legend" class="gender-legend" aria-label="Selected chart categories"></ul>
+          <p id="gender-chart-message" role="status"></p>
         </div>
+        <details class="chart-data" open>
+          <summary>Data table</summary>
+          <div class="table-container" role="region"
+               aria-labelledby="gender-heading" tabindex="0">
+            <table aria-describedby="gender-note">
+              <caption>Annual lecture records by recorded speaker gender</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Year</th>
+                  <th scope="col">Female</th>
+                  <th scope="col">Male</th>
+                  <th scope="col">Non-binary</th>
+                  <th scope="col">Multiple categories</th>
+                  <th scope="col">No known gender</th>
+                  <th scope="col">Total</th>
+                </tr>
+              </thead>
+              <tbody id="gender-per-year"></tbody>
+            </table>
+          </div>
+        </details>
         <p id="gender-note" class="analysis-note">Counts refer to lecture records with at least one speaker in the respective recorded gender category, not to individual people. Categories may overlap. Canceled records are included; undated records are excluded. No gender is inferred from names.</p>
         <details>
           <summary>Data quality details</summary>
