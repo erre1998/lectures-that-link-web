@@ -1,0 +1,29 @@
+cff-version: "1.2.0"
+message: "If you use this software, please cite it using the metadata from this file."
+title: "Lectures that Link – Web Application"
+# identifiers:
+#   - type: doi
+#     value: "10.5281/zenodo.XXXXXXX"
+type: software
+version: "0.5"
+date-released: 2026-11-27
+license: "GPL-3.0"
+authors:
+  - family-names: Renz
+    given-names: Erik
+    orcid: "https://orcid.org/0009-0005-8288-7470"
+    email: "erik.renz@uni-rostock.de"
+    affiliation: "University of Rostock"
+repository-code: "https://github.com/erre1998/lectures-that-link-web"
+keywords:
+  - "Digital Humanities"
+  - "lecture series"
+  - "data exploration"
+  - "data visualisation"
+abstract: >-
+  This web application is part of the research project
+  "Lectures that Link", which investigates European Digital
+  Humanities lecture series as nodes of interaction within
+  the Digital Humanities community. The application provides
+  interactive access to the project's research data and
+  facilitates their exploration, analysis, and visualisation.
