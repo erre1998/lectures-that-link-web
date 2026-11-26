@@ -319,6 +319,51 @@
           <p class="analysis-note">These counts refer to lecture records. Flags may overlap with each other and with classified connections.</p>
         </details>
       </section>
+      <section aria-labelledby="topic-heading">
+        <h2 id="topic-heading">LLM-generated topics</h2>
+        <label for="topic-series">Lecture series</label>
+        <select id="topic-series" disabled>
+          <option value="all">All lecture series</option>
+        </select>
+        <p id="topic-total" role="status">Lecture records: –</p>
+        <dl class="statistics">
+          <div><dt>Distinct topics</dt><dd id="topic-distinct">–</dd></div>
+          <div><dt>Topic assignments</dt><dd id="topic-assignments">–</dd></div>
+          <div><dt>Lecture records with topics</dt><dd id="topic-with">–</dd></div>
+        </dl>
+        <div class="table-container" role="region" aria-label="Topic areas" tabindex="0">
+          <table aria-describedby="topic-note">
+            <caption>Heuristic topic areas</caption>
+            <thead><tr><th scope="col">Topic area</th><th scope="col">Lecture records</th><th scope="col">Share</th></tr></thead>
+            <tbody id="topic-area-table"></tbody>
+          </table>
+        </div>
+        <details>
+          <summary>Explore individual topics</summary>
+          <label for="topic-search">Search topic labels</label>
+          <input id="topic-search" type="search" disabled>
+          <p id="topic-results" role="status">Topics: –</p>
+          <div class="table-container" role="region" aria-label="Individual topics" tabindex="0">
+            <table aria-describedby="topic-note">
+              <caption>Topic frequencies</caption>
+              <thead><tr><th scope="col">Topic</th><th scope="col">Lecture records</th><th scope="col">Share</th></tr></thead>
+              <tbody id="topic-table"></tbody>
+            </table>
+          </div>
+          <button type="button" id="topic-prev" disabled>Previous page</button>
+          <button type="button" id="topic-next" disabled>Next page</button>
+        </details>
+        <p id="topic-note" class="analysis-note">Shares use all lecture records in the selected series or corpus. Topics and areas may overlap. Searching topic labels does not change the denominator.</p>
+        <details>
+          <summary>Method and annotation coverage</summary>
+          <p class="analysis-note">Existing LLM-generated keywords are normalized for case and whitespace and counted once per lecture record. The four topic areas use word-boundary matching of selected keywords; they are not an exhaustive taxonomy. No new annotations are generated.</p>
+          <dl class="statistics">
+            <div><dt>No recorded topics</dt><dd id="topic-without">–</dd></div>
+            <div><dt>No matching topic area</dt><dd id="topic-no-area">–</dd></div>
+            <div><dt>Multiple matching topic areas</dt><dd id="topic-multiple">–</dd></div>
+          </dl>
+        </details>
+      </section>
     </main>
   </body>
 </html>

@@ -1,9 +1,7 @@
-
 const format = new Intl.NumberFormat("en");
 const percent = new Intl.NumberFormat("en", {
     style: "percent", maximumFractionDigits: 1
 });
-
 const byId = id => document.getElementById(id);
 const validCount = value => Number.isInteger(value) && value >= 0;
 
@@ -11,14 +9,8 @@ function setCount(id, value) {
     byId(id).textContent = format.format(value);
 }
 
-
-// ==================================================
-// Corpus overview
-// ==================================================
-
 function overviewValues(data) {
     const overview = data.corpusOverview;
-
     return {
         "count-series": data.counts?.series,
         "count-terms": data.counts?.terms,
@@ -35,28 +27,20 @@ function overviewValues(data) {
 }
 
 function renderOverview(data) {
-    byId("dataset-version").textContent =
-        `Dataset: ${data.datasetVersion}`;
-
+    byId("dataset-version").textContent = `Dataset: ${data.datasetVersion}`;
     for (const [id, value] of Object.entries(overviewValues(data))) {
         setCount(id, value);
     }
 }
 
-
-// ==================================================
-// Generic analysis tables
-// ==================================================
-
 // Render precomputed statistics as accessible tables.
-
 function renderRows(id, entries, label, cells, emptyMessage = "") {
     const rows = document.createDocumentFragment();
 
     for (const entry of entries) {
         const row = document.createElement("tr");
-
         const heading = document.createElement("th");
+
         heading.scope = "row";
         heading.textContent = label(entry);
         row.appendChild(heading);
@@ -85,12 +69,8 @@ function renderRows(id, entries, label, cells, emptyMessage = "") {
 }
 
 function renderTable(id, entries, headingField, fields) {
-    renderRows(
-        id,
-        entries,
-        entry => entry[headingField],
-        fields.map(field => entry => format.format(entry[field]))
-    );
+    renderRows(id, entries, entry => entry[headingField],
+        fields.map(field => entry => format.format(entry[field])));
 }
 
 function renderShareTable(id, entries, label, emptyMessage = "") {
@@ -100,14 +80,7 @@ function renderShareTable(id, entries, label, emptyMessage = "") {
     ], emptyMessage);
 }
 
-
-// ==================================================
-// Generic charts
-// ==================================================
-
-// Chart widths are presentation values,
-// not scientific calculations.
-
+// Chart widths are presentation values, not scientific calculations.
 function renderBars(id, entries, label, value, maximum) {
     const rows = document.createDocumentFragment();
 
@@ -124,8 +97,7 @@ function renderBars(id, entries, label, value, maximum) {
 
         const bar = document.createElement("span");
         bar.className = "chart-bar";
-        bar.style.width =
-            `${maximum > 0 ? value(entry) / maximum * 100 : 0}%`;
+        bar.style.width = `${maximum > 0 ? value(entry) / maximum * 100 : 0}%`;
 
         track.appendChild(bar);
 
@@ -140,11 +112,6 @@ function renderBars(id, entries, label, value, maximum) {
     byId(id).replaceChildren(rows);
 }
 
-
-// ==================================================
-// Interactive annual charts
-// ==================================================
-
 function setupAnnualChart(prefix, entries, maximum) {
     const select = byId(`${prefix}-category`);
     const list = byId(`${prefix}-chart`);
@@ -155,15 +122,11 @@ function setupAnnualChart(prefix, entries, maximum) {
     function render() {
         const field = select.value;
         const category = select.options[select.selectedIndex].text;
-
         const name = prefix === "delivery"
             ? "Lecture delivery"
             : "Audience participation";
 
-        list.setAttribute(
-            "aria-label",
-            `${name}: ${category} by year`
-        );
+        list.setAttribute("aria-label", `${name}: ${category} by year`);
 
         renderBars(
             `${prefix}-chart`,
@@ -179,45 +142,22 @@ function setupAnnualChart(prefix, entries, maximum) {
     select.disabled = false;
 }
 
-
-// ==================================================
-// Frequency distributions
-// ==================================================
-
-function renderDistribution(
-    prefix, entries, categoryField, frequencyField, unit
-) {
-    const maximum = Math.max(
-        0,
-        ...entries.map(entry => entry[frequencyField])
-    );
+function renderDistribution(prefix, entries, categoryField, frequencyField, unit) {
+    const maximum = Math.max(0, ...entries.map(entry => entry[frequencyField]));
 
     byId(`${prefix}-scale`).textContent =
         `Scale: 0–${format.format(maximum)} ${unit}`;
 
     const label = entry => format.format(entry[categoryField]);
 
-    renderRows(
-        `${prefix}-table`,
-        entries,
-        label,
-        [entry => format.format(entry[frequencyField])]
-    );
+    renderRows(`${prefix}-table`, entries, label,
+        [entry => format.format(entry[frequencyField])]);
 
-    renderBars(
-        `${prefix}-chart`,
-        entries,
-        label,
-        entry => entry[frequencyField],
-        maximum
-    );
+    renderBars(`${prefix}-chart`, entries, label,
+        entry => entry[frequencyField], maximum);
 }
 
-
-// ==================================================
-// Lecture series structure
-// ==================================================
-
+// Lecture series structure.
 function renderSeriesStructure(structure) {
     renderDistribution(
         "terms-distribution",
@@ -232,11 +172,7 @@ function renderSeriesStructure(structure) {
     );
 }
 
-
-// ==================================================
-// Speaker analysis
-// ==================================================
-
+// Speaker analysis.
 function renderSpeakerAnalysis(analysis) {
     setCount("speaker-assignments", analysis.speakerLectureAssignments);
     setCount("speaker-unresolved", analysis.unresolvedSpeakerIds);
@@ -245,52 +181,26 @@ function renderSpeakerAnalysis(analysis) {
     renderTable(
         "speaker-distribution-table",
         analysis.lecturesPerSpeakerDistribution,
-        "lectures",
-        ["speakers"]
+        "lectures", ["speakers"]
     );
 }
 
-
-// ==================================================
-// Annual gender analysis
-// ==================================================
-
+// Annual gender analysis.
 const genderFields = [
-    "female",
-    "male",
-    "nonBinary",
-    "multipleGenderCategories",
-    "withoutKnownGender",
-    "total"
+    "female", "male", "nonBinary", "multipleGenderCategories",
+    "withoutKnownGender", "total"
 ];
 
 const genderQualityFields = [
-    "withoutSpeakerId",
-    "unresolvedSpeaker",
-    "unknownGender"
+    "withoutSpeakerId", "unresolvedSpeaker", "unknownGender"
 ];
 
 function renderGenderAnalysis(entries) {
-    renderTable(
-        "gender-per-year",
-        entries,
-        "year",
-        genderFields
-    );
-
-    renderTable(
-        "gender-quality-per-year",
-        entries,
-        "year",
-        genderQualityFields
-    );
+    renderTable("gender-per-year", entries, "year", genderFields);
+    renderTable("gender-quality-per-year", entries, "year", genderQualityFields);
 }
 
-
-// ==================================================
-// Shared validation for corpus and series summaries
-// ==================================================
-
+// Shared validation and selection for corpus and series summaries.
 function validShare(entry, total) {
     return entry &&
         validCount(entry.lectures) &&
@@ -332,11 +242,6 @@ function validSeriesAnalysis(analysis, validate) {
     );
 }
 
-
-// ==================================================
-// Shared lecture series selection
-// ==================================================
-
 function setupSeriesSelector(prefix, analysis, renderSummary) {
     const select = byId(`${prefix}-series`);
     const summaries = new Map([["all", analysis.overall]]);
@@ -371,9 +276,7 @@ function setupSeriesSelector(prefix, analysis, renderSummary) {
 
     select.value = "all";
     select.addEventListener("change", render);
-
     render();
-
     select.disabled = false;
 
     return render;
@@ -396,11 +299,7 @@ function validTypeSummary(summary, field, labels, quality) {
         uniqueValues(summary[field], "type");
 }
 
-
-// ==================================================
-// Institutional affiliations
-// ==================================================
-
+// Institutional affiliations.
 const institutionLabels = new Map([
     ["university", "University"],
     ["research_institution", "Research institution"],
@@ -420,10 +319,7 @@ const institutionQuality = {
 
 function validInstitutionSummary(summary) {
     return validTypeSummary(
-        summary,
-        "types",
-        institutionLabels,
-        institutionQuality
+        summary, "types", institutionLabels, institutionQuality
     );
 }
 
@@ -439,11 +335,7 @@ function setupInstitutionAnalysis(analysis) {
     });
 }
 
-
-// ==================================================
-// Disciplinary distribution
-// ==================================================
-
+// Disciplinary distribution.
 const disciplineQuality = {
     "discipline-no-id": "withoutDisciplineId",
     "discipline-unresolved": "unresolvedDiscipline",
@@ -453,9 +345,7 @@ const disciplineQuality = {
 };
 
 function validDisciplineSummary(summary) {
-    if (!validQuality(summary, disciplineQuality)) {
-        return false;
-    }
+    if (!validQuality(summary, disciplineQuality)) return false;
 
     const validId = entry =>
         entry &&
@@ -480,9 +370,7 @@ function validDisciplineSummary(summary) {
 }
 
 function validDisciplineAnalysis(analysis) {
-    if (!validSeriesAnalysis(analysis, validDisciplineSummary)) {
-        return false;
-    }
+    if (!validSeriesAnalysis(analysis, validDisciplineSummary)) return false;
 
     const ids = new Set(
         analysis.overall.disciplines.map(entry => entry.id)
@@ -496,52 +384,40 @@ function validDisciplineAnalysis(analysis) {
 
 function setupDisciplineAnalysis(analysis) {
     const showZero = byId("discipline-show-zero");
-
     showZero.checked = false;
 
-    const render = setupSeriesSelector(
-        "discipline",
-        analysis,
-        summary => {
-            const entries = summary.disciplines.filter(entry =>
-                showZero.checked || entry.lectures > 0
-            );
+    const render = setupSeriesSelector("discipline", analysis, summary => {
+        const entries = summary.disciplines.filter(entry =>
+            showZero.checked || entry.lectures > 0
+        );
 
-            renderShareTable(
-                "discipline-table",
-                entries,
-                entry => entry.label || entry.id,
-                "No recorded disciplines in this selection."
-            );
+        renderShareTable(
+            "discipline-table",
+            entries,
+            entry => entry.label || entry.id,
+            "No recorded disciplines in this selection."
+        );
 
-            renderQuality(summary, disciplineQuality);
+        renderQuality(summary, disciplineQuality);
 
-            renderTable(
-                "discipline-unresolved-table",
-                summary.unresolvedIds,
-                "id",
-                ["lectures"]
-            );
+        renderTable(
+            "discipline-unresolved-table",
+            summary.unresolvedIds,
+            "id", ["lectures"]
+        );
 
-            byId("discipline-unresolved-region").hidden =
-                summary.unresolvedIds.length === 0;
+        byId("discipline-unresolved-region").hidden =
+            summary.unresolvedIds.length === 0;
 
-            byId("discipline-unresolved-empty").hidden =
-                summary.unresolvedIds.length > 0;
-        }
-    );
+        byId("discipline-unresolved-empty").hidden =
+            summary.unresolvedIds.length > 0;
+    });
 
     showZero.addEventListener("change", render);
     showZero.disabled = false;
 }
 
-
-// ==================================================
-// Geographical connections
-// ==================================================
-
-// Categories and counts are supplied by XSLT.
-
+// Geographical connections.
 const geographyLabels = new Map([
     ["local", "Local"],
     ["national", "National"],
@@ -560,10 +436,7 @@ const geographyQuality = {
 
 function validGeographySummary(summary) {
     return validTypeSummary(
-        summary,
-        "connections",
-        geographyLabels,
-        geographyQuality
+        summary, "connections", geographyLabels, geographyQuality
     );
 }
 
@@ -579,11 +452,130 @@ function setupGeographyAnalysis(analysis) {
     });
 }
 
+// LLM-generated topics: filter and paginate the precomputed keyword list.
+const topicAreaIds = new Set([
+    "digitizationAndCulturalHeritage",
+    "digitalEdition",
+    "analysis",
+    "artificialIntelligence"
+]);
 
-// ==================================================
-// Load and validate XSLT analysis results
-// ==================================================
+const topicQuality = {
+    "topic-with": "withTopics",
+    "topic-without": "withoutTopics",
+    "topic-no-area": "withoutTopicArea",
+    "topic-multiple": "multipleTopicAreas"
+};
 
+function validTopicSummary(summary) {
+    return validQuality(summary, topicQuality) &&
+        summary.withTopics + summary.withoutTopics === summary.total &&
+        validCount(summary.distinctTopics) &&
+        validCount(summary.topicAssignments) &&
+        Array.isArray(summary.topics) &&
+        summary.topics.length === summary.distinctTopics &&
+        summary.topics.every(entry =>
+            validShare(entry, summary.total) &&
+            entry.lectures > 0 &&
+            typeof entry.topic === "string" &&
+            entry.topic.length > 0
+        ) &&
+        uniqueValues(summary.topics, "topic") &&
+        summary.topics.reduce(
+            (sum, entry) => sum + entry.lectures, 0
+        ) === summary.topicAssignments &&
+        Array.isArray(summary.topicAreas) &&
+        summary.topicAreas.length === topicAreaIds.size &&
+        summary.topicAreas.every(entry =>
+            validShare(entry, summary.total) &&
+            topicAreaIds.has(entry.id) &&
+            typeof entry.label === "string"
+        ) &&
+        uniqueValues(summary.topicAreas, "id");
+}
+
+function setupTopicAnalysis(analysis) {
+    const search = byId("topic-search");
+    const previous = byId("topic-prev");
+    const next = byId("topic-next");
+
+    const pageSize = 25;
+
+    let summary = analysis.overall;
+    let page = 0;
+
+    search.value = "";
+
+    // Search all topics in the selected scope.
+    // Filtering changes the displayed rows, not the original statistics.
+    function renderTopics() {
+        const query = search.value.trim().toLowerCase();
+
+        const matches = summary.topics.filter(entry =>
+            entry.topic.toLowerCase().includes(query)
+        );
+
+        const lastPage = Math.max(
+            0, Math.ceil(matches.length / pageSize) - 1
+        );
+
+        page = Math.min(Math.max(0, page), lastPage);
+
+        const start = page * pageSize;
+        const end = Math.min(start + pageSize, matches.length);
+
+        renderShareTable(
+            "topic-table",
+            matches.slice(start, end),
+            entry => entry.topic,
+            "No matching topics."
+        );
+
+        byId("topic-results").textContent = matches.length
+            ? `Showing ${format.format(start + 1)}–${format.format(end)} of ${format.format(matches.length)} matching topics`
+            : "No matching topics.";
+
+        previous.disabled = page === 0;
+        next.disabled = page === lastPage;
+    }
+
+    setupSeriesSelector("topic", analysis, selection => {
+        summary = selection;
+        page = 0;
+
+        setCount("topic-distinct", summary.distinctTopics);
+        setCount("topic-assignments", summary.topicAssignments);
+
+        renderQuality(summary, topicQuality);
+
+        renderShareTable(
+            "topic-area-table",
+            summary.topicAreas,
+            entry => entry.label
+        );
+
+        renderTopics();
+    });
+
+    search.addEventListener("input", () => {
+        page = 0;
+        renderTopics();
+    });
+
+    previous.addEventListener("click", () => {
+        page--;
+        renderTopics();
+    });
+
+    next.addEventListener("click", () => {
+        page++;
+        renderTopics();
+    });
+
+    search.disabled = false;
+}
+
+// Load and validate the XSLT analysis results.
 async function loadData() {
     const status = byId("status");
 
@@ -604,35 +596,27 @@ async function loadData() {
 
         const data = await response.json();
 
-
-        // Validate annual analysis results.
-
+        // Validate annual statistics.
         requireValid(
             Array.isArray(data.lecturesPerYear) &&
             Array.isArray(data.audiencePerYear),
             "annual analysis results"
         );
 
-
         // Validate lecture series structure.
-
         requireValid(
             Array.isArray(data.seriesStructure?.termsPerSeriesDistribution) &&
             Array.isArray(data.seriesStructure?.lecturesPerTermDistribution),
             "series structure results"
         );
 
-
         // Validate corpus overview.
-
         requireValid(
             Object.values(overviewValues(data)).every(validCount),
             "corpus overview"
         );
 
-
         // Validate speaker analysis.
-
         const speaker = data.speakerAnalysis;
 
         requireValid(
@@ -651,9 +635,7 @@ async function loadData() {
             "speaker analysis"
         );
 
-
         // Validate gender analysis.
-
         const gender = data.genderPerYear;
 
         requireValid(
@@ -669,9 +651,7 @@ async function loadData() {
             "gender analysis"
         );
 
-
-        // Validate institution analysis.
-
+        // Validate institutional affiliations.
         const institution = data.institutionTypeAnalysis;
 
         requireValid(
@@ -679,9 +659,7 @@ async function loadData() {
             "institution analysis"
         );
 
-
         // Validate disciplinary distribution.
-
         const discipline = data.disciplineAnalysis;
 
         requireValid(
@@ -689,9 +667,7 @@ async function loadData() {
             "discipline analysis"
         );
 
-
         // Validate geographical connections.
-
         const geography = data.geographicalAnalysis;
 
         requireValid(
@@ -699,14 +675,18 @@ async function loadData() {
             "geographical analysis"
         );
 
+        // Validate LLM-generated topics.
+        const topic = data.topicAnalysis;
+
+        requireValid(
+            validSeriesAnalysis(topic, validTopicSummary),
+            "topic analysis"
+        );
 
         // Corpus overview.
-
         renderOverview(data);
 
-
         // Lecture delivery.
-
         renderTable(
             "lectures-per-year",
             data.lecturesPerYear,
@@ -721,9 +701,7 @@ async function loadData() {
             ]
         );
 
-
         // Audience participation.
-
         renderTable(
             "audience-per-year",
             data.audiencePerYear,
@@ -739,9 +717,7 @@ async function loadData() {
             ]
         );
 
-
         // Common scale for annual charts.
-
         const maximum = Math.max(
             0,
             ...data.lecturesPerYear.map(entry => entry.total),
@@ -754,36 +730,13 @@ async function loadData() {
         byId("undated-lectures").textContent =
             `Undated lectures: ${format.format(data.undatedLectures)}`;
 
-
-        // Lecture series structure.
-
         renderSeriesStructure(data.seriesStructure);
-
-
-        // Speaker analysis.
-
         renderSpeakerAnalysis(speaker);
-
-
-        // Annual gender analysis.
-
         renderGenderAnalysis(gender);
-
-
-        // Institutional affiliations.
-
         setupInstitutionAnalysis(institution);
-
-
-        // Disciplinary distribution.
-
         setupDisciplineAnalysis(discipline);
-
-
-        // Geographical connections.
-
         setupGeographyAnalysis(geography);
-
+        setupTopicAnalysis(topic);
 
         status.textContent = "Data loaded successfully.";
 
@@ -795,9 +748,5 @@ async function loadData() {
     }
 }
 
-
-// ==================================================
-// Initialize application
-// ==================================================
-
+// Initialize application.
 loadData();
