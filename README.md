@@ -23,7 +23,7 @@ If you use the underlying research data or analytical results, please also cite 
 
 ## Use of Generative AI
 
-ChatGPT (OpenAI, GPT-6.2; 2026) was used as a supporting tool during the development of the web application, e. g. for code revision, debugging, and technical documentation. All AI-generated contributions are subject to critical review and testing by the author, who retains responsibility for the conceptual design, methodological decisions, and implementation.
+ChatGPT (OpenAI, GPT-6.2; 2026) was used as a supporting tool during the development of the web application, e.g. for code revision, debugging, and technical documentation. All AI-generated contributions are subject to critical review and testing by the author, who retains responsibility for the conceptual design, methodological decisions, and implementation.
 
 ## Project Status
 
