@@ -1,5 +1,8 @@
 
 const format = new Intl.NumberFormat("en");
+const percent = new Intl.NumberFormat("en", {
+    style: "percent", maximumFractionDigits: 1
+});
 
 function renderOverview(data) {
     document.getElementById("dataset-version").textContent =
@@ -48,6 +51,7 @@ function renderTable(id, entries, headingField, fields) {
         }
         rows.appendChild(row);
     }
+
     tbody.replaceChildren(rows);
 }
 
@@ -93,6 +97,7 @@ function setupAnnualChart(prefix, entries, maximum) {
             "aria-label",
             `${prefix === "delivery" ? "Lecture delivery" : "Audience participation"}: ${category} by year`
         );
+
         list.replaceChildren(rows);
     }
 
@@ -121,6 +126,7 @@ function renderDistribution(prefix, entries, categoryField, frequencyField, unit
         const heading = document.createElement("th");
         heading.scope = "row";
         heading.textContent = format.format(category);
+
         const cell = document.createElement("td");
         cell.textContent = format.format(frequency);
         row.append(heading, cell);
@@ -170,18 +176,15 @@ function renderSeriesStructure(structure) {
 function renderSpeakerAnalysis(analysis) {
     document.getElementById("speaker-assignments").textContent =
         format.format(analysis.speakerLectureAssignments);
-
     document.getElementById("speaker-unresolved").textContent =
         format.format(analysis.unresolvedSpeakerIds);
-
     document.getElementById("speaker-missing").textContent =
         format.format(analysis.lecturesWithoutSpeakerId);
 
     renderTable(
         "speaker-distribution-table",
         analysis.lecturesPerSpeakerDistribution,
-        "lectures",
-        ["speakers"]
+        "lectures", ["speakers"]
     );
 }
 
@@ -202,19 +205,118 @@ const genderQualityFields = [
 ];
 
 function renderGenderAnalysis(entries) {
-    renderTable(
-        "gender-per-year",
-        entries,
-        "year",
-        genderFields
+    renderTable("gender-per-year", entries, "year", genderFields);
+    renderTable("gender-quality-per-year", entries, "year", genderQualityFields);
+}
+
+// Institutional affiliations: use the XSLT summaries without recalculation.
+const institutionLabels = new Map([
+    ["university", "University"],
+    ["research_institution", "Research institution"],
+    ["glam", "GLAM"],
+    ["company", "Company"],
+    ["other", "Other"],
+    ["self-employment", "Self-employment"]
+]);
+
+const institutionQuality = {
+    "institution-no-id": "withoutAffiliationId",
+    "institution-unresolved": "unresolvedAffiliation",
+    "institution-unknown": "unknownInstitutionType",
+    "institution-no-type": "withoutKnownType",
+    "institution-multiple": "multipleInstitutionTypes"
+};
+
+function validInstitutionSummary(summary) {
+    if (!summary || !Number.isInteger(summary.total) || summary.total < 0) {
+        return false;
+    }
+
+    const validCount = value =>
+        Number.isInteger(value) &&
+        value >= 0 &&
+        value <= summary.total;
+
+    return Object.values(institutionQuality).every(field =>
+        validCount(summary[field])) &&
+        Array.isArray(summary.types) &&
+        summary.types.length === institutionLabels.size &&
+        new Set(summary.types.map(entry => entry?.type)).size === institutionLabels.size &&
+        summary.types.every(entry =>
+            entry &&
+            institutionLabels.has(entry.type) &&
+            validCount(entry.lectures) &&
+            (summary.total === 0
+                ? entry.share === null
+                : Number.isFinite(entry.share) &&
+                  entry.share >= 0 &&
+                  entry.share <= 1)
+        );
+}
+
+function setupInstitutionAnalysis(analysis) {
+    const select = document.getElementById("institution-series");
+    const table = document.getElementById("institution-type-table");
+    const summaries = new Map([["all", analysis.overall]]);
+
+    const series = [...analysis.perSeries].sort((a, b) =>
+        (a.seriesName || a.seriesId).localeCompare(
+            b.seriesName || b.seriesId, "en"
+        ) ||
+        a.seriesId.localeCompare(b.seriesId, "en")
     );
 
-    renderTable(
-        "gender-quality-per-year",
-        entries,
-        "year",
-        genderQualityFields
-    );
+    for (const entry of series) {
+        const option = document.createElement("option");
+        option.value = `series:${entry.seriesId}`;
+        option.textContent = entry.seriesName || entry.seriesId;
+
+        select.appendChild(option);
+        summaries.set(option.value, entry);
+    }
+
+    function render() {
+        const summary = summaries.get(select.value);
+
+        if (!summary) return;
+
+        document.getElementById("institution-total").textContent =
+            `Lecture records: ${format.format(summary.total)}`;
+
+        const rows = document.createDocumentFragment();
+
+        for (const entry of summary.types) {
+            const row = document.createElement("tr");
+
+            const heading = document.createElement("th");
+            heading.scope = "row";
+            heading.textContent = institutionLabels.get(entry.type);
+
+            const count = document.createElement("td");
+            count.textContent = format.format(entry.lectures);
+
+            const share = document.createElement("td");
+            share.textContent =
+                entry.share === null
+                    ? "–"
+                    : percent.format(entry.share);
+
+            row.append(heading, count, share);
+            rows.appendChild(row);
+        }
+
+        table.replaceChildren(rows);
+
+        for (const [id, field] of Object.entries(institutionQuality)) {
+            document.getElementById(id).textContent =
+                format.format(summary[field]);
+        }
+    }
+
+    select.value = "all";
+    select.addEventListener("change", render);
+    render();
+    select.disabled = false;
 }
 
 // Load and validate XSLT analysis results.
@@ -240,12 +342,8 @@ async function loadData() {
         }
 
         // Validate lecture series structure.
-        if (!Array.isArray(
-                data.seriesStructure?.termsPerSeriesDistribution
-            ) ||
-            !Array.isArray(
-                data.seriesStructure?.lecturesPerTermDistribution
-            )) {
+        if (!Array.isArray(data.seriesStructure?.termsPerSeriesDistribution) ||
+            !Array.isArray(data.seriesStructure?.lecturesPerTermDistribution)) {
 
             throw new Error(
                 "Missing series structure results. Regenerate analyses.json."
@@ -277,24 +375,20 @@ async function loadData() {
         // Validate speaker analysis.
         const speaker = data.speakerAnalysis;
 
-        if (!Array.isArray(
-                speaker?.lecturesPerSpeakerDistribution
-            ) ||
+        if (!Array.isArray(speaker?.lecturesPerSpeakerDistribution) ||
             ![
                 speaker.speakerLectureAssignments,
                 speaker.unresolvedSpeakerIds,
                 speaker.lecturesWithoutSpeakerId
-            ].every(
-                value => Number.isInteger(value) && value >= 0
+            ].every(value =>
+                Number.isInteger(value) && value >= 0
             ) ||
-            !speaker.lecturesPerSpeakerDistribution.every(
-                entry =>
-                    Number.isInteger(entry.lectures) &&
-                    entry.lectures > 0 &&
-                    Number.isInteger(entry.speakers) &&
-                    entry.speakers >= 0
+            !speaker.lecturesPerSpeakerDistribution.every(entry =>
+                Number.isInteger(entry.lectures) &&
+                entry.lectures > 0 &&
+                Number.isInteger(entry.speakers) &&
+                entry.speakers >= 0
             )) {
-
             throw new Error(
                 "Missing or invalid speaker analysis. Regenerate analyses.json."
             );
@@ -307,16 +401,33 @@ async function loadData() {
             !gender.every(entry =>
                 entry &&
                 Number.isInteger(entry.year) &&
-                [...genderFields, ...genderQualityFields].every(
-                    field =>
-                        Number.isInteger(entry[field]) &&
-                        entry[field] >= 0 &&
-                        entry[field] <= entry.total
+                [...genderFields, ...genderQualityFields].every(field =>
+                    Number.isInteger(entry[field]) &&
+                    entry[field] >= 0 &&
+                    entry[field] <= entry.total
                 )
             )) {
-
             throw new Error(
                 "Missing or invalid gender analysis. Regenerate analyses.json."
+            );
+        }
+
+        // Validate institution analysis.
+        const institution = data.institutionTypeAnalysis;
+
+        if (!validInstitutionSummary(institution?.overall) ||
+            !Array.isArray(institution.perSeries) ||
+            !institution.perSeries.every(entry =>
+                validInstitutionSummary(entry) &&
+                typeof entry.seriesId === "string" &&
+                entry.seriesId.length > 0 &&
+                typeof entry.seriesName === "string"
+            ) ||
+            new Set(institution.perSeries.map(entry => entry.seriesId)).size !==
+                institution.perSeries.length) {
+
+            throw new Error(
+                "Missing or invalid institution analysis. Regenerate analyses.json."
             );
         }
 
@@ -361,17 +472,8 @@ async function loadData() {
             ...data.audiencePerYear.map(entry => entry.total)
         );
 
-        setupAnnualChart(
-            "delivery",
-            data.lecturesPerYear,
-            maximum
-        );
-
-        setupAnnualChart(
-            "audience",
-            data.audiencePerYear,
-            maximum
-        );
+        setupAnnualChart("delivery", data.lecturesPerYear, maximum);
+        setupAnnualChart("audience", data.audiencePerYear, maximum);
 
         document.getElementById("undated-lectures").textContent =
             `Undated lectures: ${format.format(data.undatedLectures)}`;
@@ -384,6 +486,9 @@ async function loadData() {
 
         // Annual gender analysis.
         renderGenderAnalysis(gender);
+
+        // Institutional affiliations.
+        setupInstitutionAnalysis(institution);
 
         status.textContent = "Data loaded successfully.";
 

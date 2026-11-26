@@ -213,6 +213,39 @@
           <p id="gender-quality-note" class="analysis-note">Unclassified gender means at least one registered speaker has no recognized gender category. These quality flags may overlap with each other and with known gender categories.</p>
         </details>
       </section>
+
+      <section aria-labelledby="institution-heading">
+        <h2 id="institution-heading">Institutional affiliations</h2>
+        <label for="institution-series">Lecture series</label>
+        <select id="institution-series" disabled>
+          <option value="all">All lecture series</option>
+        </select>
+        <p id="institution-total" role="status">Lecture records: –</p>
+        <div class="table-container" role="region"
+             aria-labelledby="institution-heading" tabindex="0">
+          <table aria-describedby="institution-note">
+            <caption>Lecture records by affiliation institution type</caption>
+            <thead><tr>
+              <th scope="col">Institution type</th>
+              <th scope="col">Lecture records</th>
+              <th scope="col">Share</th>
+            </tr></thead>
+            <tbody id="institution-type-table"></tbody>
+          </table>
+        </div>
+        <p id="institution-note" class="analysis-note">Each institution type is counted at most once per lecture record. Shares use all lecture records in the selected scope, including canceled records. Types may overlap.</p>
+        <details>
+          <summary>Data quality and multiple assignments</summary>
+          <dl class="statistics">
+            <div><dt>No affiliation ID</dt><dd id="institution-no-id">–</dd></div>
+            <div><dt>Unresolved affiliation ID</dt><dd id="institution-unresolved">–</dd></div>
+            <div><dt>Unclassified institution type</dt><dd id="institution-unknown">–</dd></div>
+            <div><dt>No known institution type</dt><dd id="institution-no-type">–</dd></div>
+            <div><dt>Multiple institution types</dt><dd id="institution-multiple">–</dd></div>
+          </dl>
+          <p class="analysis-note">These counts refer to lecture records. Flags may overlap with each other and with known types.</p>
+        </details>
+      </section>
     </main>
   </body>
 </html>
