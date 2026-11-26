@@ -72,6 +72,15 @@
       are heuristic, not a controlled taxonomy. Shares use all lectures,
       including canceled records; empty series have null shares. Missing
       topics are reported separately. No new LLM annotations are generated.
+    - Corpus overview: count distinct local references for organizers,
+      host institutions and affiliations. Organizers are identified by the
+      original org[@role='organizer'] encoding on terms; person and institution
+      register matches are distinguished. Institution and city counts refer
+      to resolved register IDs, not inferred identities. Countries are taken
+      from resolved cities' country references or directly referenced country
+      entries. Virtual places are excluded from physical city counts. Missing,
+      unresolved and wrong-type references remain explicit; no corrections
+      are inferred. Canceled lecture records are included.
     - Other legacy analyses are retained but not executed by default.
   -->
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
@@ -607,6 +616,62 @@
     }"/>
   </xsl:function>
 
+  <!-- JSON successor to the institutional and geographical number-of-* templates.
+       Local references are deduplicated using the same helper as geographical analysis. -->
+  <xsl:function name="local:overview-geography" as="map(*)">
+    <xsl:param name="ids" as="xs:string*"/>
+    <xsl:variable name="registered" select="$places[@xml:id = $ids]"/>
+    <xsl:variable name="cities" select="$registered[@type='city']"/>
+    <xsl:variable name="country-ids" as="xs:string*"
+      select="distinct-values((local:geo-ids($cities/country/@corresp),
+                              $registered[@type='country']/@xml:id ! string(.)))"/>
+    <xsl:variable name="countries" select="$places[@type='country'][@xml:id = $country-ids]"/>
+    <xsl:sequence select="map {
+      'referencedPlaces': count($ids),
+      'cities': count($cities),
+      'countries': count($countries),
+      'referencedCountries': count($country-ids),
+      'virtualPlaceIds': array { sort($registered[@type='virtual']/@xml:id ! string(.)) },
+      'directCountryIds': array { sort($registered[@type='country']/@xml:id ! string(.)) },
+      'unresolvedPlaceIds': array { sort($ids[not(. = $registered/@xml:id)]) },
+      'unresolvedOrInvalidCountryIds': array { sort($country-ids[not(. = $countries/@xml:id)]) },
+      'citiesWithoutResolvedCountryIds': array {
+        sort($cities[empty(local:geo-countries(string(@xml:id)))]/@xml:id ! string(.))
+      }
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:corpus-overview" as="map(*)">
+    <xsl:variable name="organizer-ids" select="local:geo-ids($lecture-terms//org[@role='organizer']/@corresp)"/>
+    <xsl:variable name="organizer-persons" select="$persons[@xml:id = $organizer-ids]"/>
+    <xsl:variable name="organizer-orgs" select="$institutions[@xml:id = $organizer-ids]"/>
+    <xsl:variable name="host-ids" select="local:geo-ids($lectures/org[@role='host-institution']/@corresp)"/>
+    <xsl:variable name="affiliation-ids" select="local:geo-ids($lectures//affiliation/@corresp)"/>
+    <xsl:variable name="host-orgs" select="$institutions[@xml:id = $host-ids]"/>
+    <xsl:variable name="affiliation-orgs" select="$institutions[@xml:id = $affiliation-ids]"/>
+    <xsl:sequence select="map {
+      'organizers': map {
+        'uniqueIds': count($organizer-ids),
+        'registeredPersons': count($organizer-persons),
+        'registeredInstitutions': count($organizer-orgs),
+        'unresolvedIds': array { sort($organizer-ids[not(. = ($organizer-persons/@xml:id, $organizer-orgs/@xml:id))]) }
+      },
+      'hostInstitutions': map {
+        'uniqueIds': count($host-ids),
+        'registeredInstitutions': count($host-orgs),
+        'unresolvedIds': array { sort($host-ids[not(. = $host-orgs/@xml:id)]) }
+      },
+      'affiliationInstitutions': map {
+        'uniqueIds': count($affiliation-ids),
+        'registeredInstitutions': count($affiliation-orgs),
+        'unresolvedIds': array { sort($affiliation-ids[not(. = $affiliation-orgs/@xml:id)]) },
+        'withoutPlaceIds': array { sort($affiliation-orgs[empty(local:geo-ids(place/@corresp))]/@xml:id ! string(.)) }
+      },
+      'hostGeography': local:overview-geography(local:geo-ids($lecture-series/@where)),
+      'affiliationGeography': local:overview-geography(local:geo-ids($affiliation-orgs/place/@corresp))
+    }"/>
+  </xsl:function>
+
   <xsl:template match="/">
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
@@ -630,7 +695,8 @@
       'institutionTypeAnalysis': local:institution-type-analysis($lecture-series, $lectures),
       'disciplineAnalysis': local:discipline-analysis($lecture-series, $lectures),
       'geographicalAnalysis': local:geographical-analysis($lecture-series, $lectures),
-      'topicAnalysis': local:topic-analysis($lecture-series, $lectures)
+      'topicAnalysis': local:topic-analysis($lecture-series, $lectures),
+      'corpusOverview': local:corpus-overview()
     }"/>
   </xsl:template>
   
