@@ -49,6 +49,12 @@
       Denominator: all recorded lectures, including canceled records.
       Empty series have null shares; missing, unresolved and unclassified
       affiliations are reported separately. No affiliation is inferred.
+    - Disciplinary analysis: lecture-level counts and shares for the
+      entire corpus and each series, using the disciplines taxonomy.
+      Local references are tokenized and deduplicated per lecture.
+      Missing and unresolved references are reported without guessing
+      corrections. Categories may overlap; denominator is all lecture
+      records, including canceled records. Empty series have null shares.
     - Other legacy analyses are retained but not executed by default.
   -->
   <xsl:output method="json" encoding="UTF-8" indent="yes"/>
@@ -307,6 +313,95 @@
     }"/>
   </xsl:function>
 
+  <!-- JSON successor to ls-disciplines. -->
+  <xsl:variable name="discipline-categories" as="element()*"
+    select="//taxonomy[@xml:id='disciplines']/category"/>
+
+  <xsl:function name="local:lecture-discipline-record" as="map(*)">
+    <xsl:param name="lecture" as="element()"/>
+    <xsl:variable name="refs" as="xs:string*"
+      select="distinct-values(
+        (for $ref in $lecture//term[@type='discipline']/@corresp
+         return tokenize(normalize-space($ref), '\s+'))[. != ''])"/>
+    <xsl:variable name="ids" as="xs:string*"
+      select="$refs[starts-with(., '#') and string-length(.) gt 1]
+              ! substring(., 2)"/>
+    <xsl:variable name="known" as="xs:string*"
+      select="$ids[. = $discipline-categories/@xml:id]"/>
+    <xsl:variable name="unresolved" as="xs:string*"
+      select="$ids[not(. = $discipline-categories/@xml:id)]"/>
+    <xsl:sequence select="map {
+      'seriesId': string($lecture/ancestor::event[@type='lecture-series'][1]/@xml:id),
+      'disciplines': $known,
+      'unresolvedIds': $unresolved,
+      'withoutDisciplineId': empty($ids),
+      'unresolvedDiscipline': exists($unresolved),
+      'invalidDisciplineReference': exists($refs[not(starts-with(., '#') and string-length(.) gt 1)]),
+      'withoutKnownDiscipline': empty($known),
+      'multipleDisciplines': count($known) gt 1
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:discipline-summary" as="map(*)">
+    <xsl:param name="records" as="map(*)*"/>
+    <xsl:variable name="total" select="count($records)"/>
+    <xsl:variable name="categories" as="map(*)*">
+      <xsl:for-each select="$discipline-categories">
+        <xsl:variable name="id" select="string(@xml:id)"/>
+        <xsl:variable name="count" select="count($records[?disciplines = $id])"/>
+        <xsl:sequence select="map {
+          'id': $id,
+          'label': normalize-space(string((catDesc/name, catDesc)[1])),
+          'wikidata': normalize-space(string((catDesc/idno[@type='wikidata'])[1])),
+          'lectures': $count,
+          'share': if ($total gt 0) then $count div $total else ()
+        }"/>
+      </xsl:for-each>
+    </xsl:variable>
+    <xsl:variable name="sorted" as="map(*)*">
+      <xsl:perform-sort select="$categories">
+        <xsl:sort select="?lectures" data-type="number" order="descending"/>
+        <xsl:sort select="?label"/>
+      </xsl:perform-sort>
+    </xsl:variable>
+    <xsl:sequence select="map {
+      'total': $total,
+      'disciplines': array { $sorted },
+      'withoutDisciplineId': count($records[?withoutDisciplineId]),
+      'unresolvedDiscipline': count($records[?unresolvedDiscipline]),
+      'invalidDisciplineReference': count($records[?invalidDisciplineReference]),
+      'withoutKnownDiscipline': count($records[?withoutKnownDiscipline]),
+      'multipleDisciplines': count($records[?multipleDisciplines]),
+      'unresolvedIds': array {
+        for $id in sort(distinct-values($records?unresolvedIds))
+        return map {
+          'id': $id,
+          'lectures': count($records[?unresolvedIds = $id])
+        }
+      }
+    }"/>
+  </xsl:function>
+
+  <xsl:function name="local:discipline-analysis" as="map(*)">
+    <xsl:param name="series" as="element()*"/>
+    <xsl:param name="lectures" as="element()*"/>
+    <xsl:variable name="records" as="map(*)*"
+      select="$lectures ! local:lecture-discipline-record(.)"/>
+    <xsl:sequence select="map {
+      'overall': local:discipline-summary($records),
+      'perSeries': array {
+        for $s in $series
+        return map:merge((
+          map {
+            'seriesId': string($s/@xml:id),
+            'seriesName': normalize-space(string(($s/eventName[@xml:lang='en'], $s/eventName)[1]))
+          },
+          local:discipline-summary($records[?seriesId = string($s/@xml:id)])
+        ))
+      }
+    }"/>
+  </xsl:function>
+
   <xsl:template match="/">
     <xsl:variable name="annual" as="map(*)*">
       <xsl:call-template name="lectures-per-year"/>
@@ -327,7 +422,8 @@
       'seriesStructure': local:series-structure($lecture-series, $lecture-terms),
       'speakerAnalysis': local:speaker-analysis($lectures),
       'genderPerYear': array { local:gender-per-year($lectures) },
-      'institutionTypeAnalysis': local:institution-type-analysis($lecture-series, $lectures)
+      'institutionTypeAnalysis': local:institution-type-analysis($lecture-series, $lectures),
+      'disciplineAnalysis': local:discipline-analysis($lecture-series, $lectures)
     }"/>
   </xsl:template>
   
