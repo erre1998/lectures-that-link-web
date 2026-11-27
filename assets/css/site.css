@@ -213,3 +213,21 @@ main > section[data-analysis-view="topics"] select {
 .lecture-detail-metadata dt { font-weight: 600; }
 .lecture-detail-metadata dd { margin: 0; }
 @media (max-width: 480px) { .lecture-detail { padding: 1rem; } .lecture-detail-metadata { grid-template-columns: 1fr; gap: .1rem; } .lecture-detail-metadata dd { margin-bottom: .5rem; } }
+
+/* Accessible navigation from chart categories to individual lecture records. */
+.analysis-explore {
+    font: inherit;
+    color: var(--accent);
+    background: transparent;
+    border: 0;
+    padding: .25rem 0;
+    min-height: 24px;
+    text-decoration: underline;
+    text-underline-offset: .16em;
+    cursor: pointer;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+.analysis-explore:hover { text-decoration-thickness: 2px; }
+#lecture-analysis-selection { border-inline-start: 3px solid var(--accent); padding-inline-start: .75rem; }
+#lecture-analysis-selection[hidden] { display: none; }

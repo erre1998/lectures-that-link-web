@@ -54,6 +54,46 @@
     let page = 0;
     let loaded = false;
     let loading = false;
+    let pendingSelection = null;
+    const selectionNote = byId("lecture-analysis-selection");
+
+    // Start a fresh, reproducible query from a quantitative chart.
+    // Do not silently combine it with a previous search or filter state.
+    function applyAnalysisSelection() {
+        if (!pendingSelection) return;
+        const selection = pendingSelection;
+        pendingSelection = null;
+        const entries = Object.entries(selection.filters);
+        const selected = entries.map(([key, value]) => ({
+            filter: filters.find(item => item.key === key), value
+        }));
+        const valid = selected.every(({ filter, value }) => filter &&
+            [...filter.control.options].some(item => item.value === value));
+        const count = valid ? searchIndex.filter(entry => selected.every(({ filter, value }) =>
+            filter.matches ? filter.matches(entry.record, value) : entry.filters[filter.key].has(value))).length : -1;
+        selectionNote.hidden = false;
+        if (!valid || count !== selection.expected) {
+            selectionNote.textContent = "The selected analysis could not be matched to the lecture export. Previous filters have been retained. Regenerate both JSON files from the same source.";
+            return;
+        }
+        search.value = "";
+        for (const filter of filters) filter.control.value = "";
+        for (const { filter, value } of selected) filter.control.value = value;
+        filterPanel.open = true;
+        applySearch();
+        selectionNote.hidden = false;
+        selectionNote.textContent = `Analysis selection: ${selection.label} (${number.format(count)} lecture records). You can refine or reset these filters.`;
+    }
+
+    document.addEventListener("lecture:explore", event => {
+        const selection = event.detail;
+        if (!selection || !selection.filters || typeof selection.label !== "string" ||
+            !Number.isInteger(selection.expected) || selection.expected < 1) return;
+        pendingSelection = selection;
+        tab.click();
+        byId("lectures-heading").focus();
+        if (loaded) applyAnalysisSelection();
+    });
 
     function validDataset(data) {
         const items = data?.lectures;
@@ -128,6 +168,7 @@
     }
 
     function applySearch() {
+        selectionNote.hidden = true;
         const terms = [...new Set(normalize(search.value).split(" ").filter(Boolean))];
         const active = filters.filter(filter => filter.control.value !== "");
         const from = byId("lecture-filter-from");
@@ -365,6 +406,7 @@
             searchPanel.hidden = false;
             applySearch();
             loaded = true;
+            applyAnalysisSelection();
         } catch (error) {
             status.textContent = "Unable to load lecture records. Please try again or regenerate lectures.json.";
             searchPanel.hidden = true;

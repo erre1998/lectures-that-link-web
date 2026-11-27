@@ -62,6 +62,7 @@
             <option value="otherOrUnknown">Other or unknown</option>
             <option value="multipleFormats">Multiple formats</option>
           </select>
+          <p class="analysis-note">Select an underlined year to explore its lecture records.</p>
           <p id="delivery-scale" class="chart-scale"></p>
           <ul id="delivery-chart" class="chart-bars" aria-label="Lecture delivery per year"></ul>
         </div>
@@ -101,6 +102,7 @@
             <option value="otherOrUnknown">Other or unknown</option>
             <option value="multipleFormats">Multiple formats</option>
           </select>
+          <p class="analysis-note">Select an underlined year to explore its lecture records.</p>
           <p id="audience-scale" class="chart-scale"></p>
           <ul id="audience-chart" class="chart-bars" aria-label="Audience participation per year"></ul>
         </div>
@@ -225,7 +227,7 @@
           <div class="table-container" role="region"
                aria-labelledby="gender-heading" tabindex="0">
             <table aria-describedby="gender-note">
-              <caption>Annual lecture records by recorded speaker gender</caption>
+              <caption>Annual lecture records by recorded speaker gender. Select an underlined count to explore the corresponding records.</caption>
               <thead>
                 <tr>
                   <th scope="col">Year</th>
@@ -273,6 +275,7 @@
         <div id="institution-visualization" class="affiliation-chart" hidden>
           <p class="chart-scale">Share of all lecture records in the selected scope · scale: 0–100%</p>
           <div class="share-axis" aria-hidden="true"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+          <p class="analysis-note">Select an underlined category to explore its lecture records.</p>
           <ul id="institution-chart" class="share-bars" aria-label="Institution types: lecture records and shares"></ul>
           <p id="institution-chart-message" class="analysis-note" role="status"></p>
         </div>
@@ -314,6 +317,7 @@
         <div id="discipline-visualization" class="affiliation-chart" hidden>
           <p class="chart-scale">Share of all lecture records in the selected scope · scale: 0–100%</p>
           <div class="share-axis" aria-hidden="true"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+          <p class="analysis-note">Select an underlined category to explore its lecture records.</p>
           <ul id="discipline-chart" class="share-bars" aria-label="Top 10 recorded disciplines: lecture records and shares"></ul>
           <p id="discipline-chart-message" class="analysis-note" role="status"></p>
         </div>
@@ -431,7 +435,8 @@
             <h3>Most frequent individual topics</h3>
             <p class="chart-scale">Share of all lecture records in the selected scope · scale: 0–100%</p>
             <div class="share-axis" aria-hidden="true"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
-            <ul id="topic-top-chart" class="share-bars" aria-label="Ten most frequent individual topics: lecture records and shares"></ul>
+            <p class="analysis-note">Select an underlined category to explore its lecture records.</p>
+          <ul id="topic-top-chart" class="share-bars" aria-label="Ten most frequent individual topics: lecture records and shares"></ul>
             <p id="topic-top-chart-message" class="analysis-note" role="status"></p>
           </div>
         </div>
@@ -462,7 +467,8 @@
         </details>
       </section>
       <section data-analysis-view="lectures" aria-labelledby="lectures-heading">
-        <h2 id="lectures-heading">Lectures</h2>
+        <h2 id="lectures-heading" tabindex="-1">Lectures</h2>
+        <p id="lecture-analysis-selection" class="analysis-note" role="status" hidden></p>
         <div id="lecture-search-panel" class="lecture-search-panel" role="search" aria-label="Search lecture records" hidden>
           <label for="lecture-search">Search lectures</label>
           <div class="lecture-search-controls">

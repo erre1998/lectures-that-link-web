@@ -146,9 +146,73 @@
         ["European", "European"], ["other continents", "Other continents"]
     ]);
 
+    // Real buttons keep drill-down links keyboard accessible. A count check in
+    // lectures.js guards against mismatched analysis and lecture exports.
+    function exploreButton(text, label, filters, expected, className = "") {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `analysis-explore ${className}`;
+        button.textContent = text;
+        button.setAttribute("aria-label", `Explore ${label}: ${number.format(expected)} lecture records`);
+        button.addEventListener("click", () => document.dispatchEvent(new CustomEvent("lecture:explore", {
+            detail: { label, filters, expected }
+        })));
+        return button;
+    }
+
+    function linkAnnualChart(prefix, entries) {
+        const list = byId(`${prefix}-chart`);
+        const select = byId(`${prefix}-category`);
+        const formats = { total: null, inPerson: "in person", online: "online",
+            ...(prefix === "delivery" ? { canceled: "canceled" } : { hybrid: "hybrid" }) };
+        const byYear = new Map(entries.map(entry => [String(entry.year), entry]));
+        function linkRows() {
+            const field = select.value;
+            if (!Object.hasOwn(formats, field)) return;
+            for (const row of list.children) {
+                const label = row.querySelector(".chart-year:not(button)");
+                if (!label) continue;
+                const year = label.textContent;
+                const expected = byYear.get(year)?.[field];
+                if (!Number.isInteger(expected) || expected < 1) continue;
+                const filters = { from: year, to: year };
+                if (formats[field]) filters[prefix] = formats[field];
+                const description = `${prefix === "delivery" ? "Lecture delivery" : "Audience participation"} · ${select.selectedOptions[0].textContent} · ${year}`;
+                label.replaceWith(exploreButton(year, description, filters, expected, "chart-year"));
+            }
+        }
+        // app.js replaces the rows when the annual category changes.
+        new MutationObserver(linkRows).observe(list, { childList: true });
+        linkRows();
+    }
+
+    function linkGenderTable(entries) {
+        const table = byId("gender-per-year");
+        const byYear = new Map(entries.map(entry => [String(entry.year), entry]));
+        const columns = [[1, "female", "female", "Female"], [2, "male", "male", "Male"],
+            [3, "nonBinary", "non-binary", "Non-binary"], [6, "total", null, "All lecture records"]];
+        function linkRows() {
+            for (const row of table.rows) {
+                const year = row.cells[0]?.textContent;
+                const entry = byYear.get(year);
+                if (!entry) continue;
+                for (const [index, key, gender, label] of columns) {
+                    const cell = row.cells[index];
+                    const expected = entry[key];
+                    if (!cell || cell.querySelector("button") || !Number.isInteger(expected) || expected < 1) continue;
+                    const filters = { from: year, to: year };
+                    if (gender) filters.gender = gender;
+                    cell.replaceChildren(exploreButton(number.format(expected), `Recorded speaker gender · ${label} · ${year}`, filters, expected));
+                }
+            }
+        }
+        new MutationObserver(linkRows).observe(table, { childList: true });
+        linkRows();
+    }
+
     function shareChart(prefix, analysis, field, label, {
         limit = Infinity, selector = prefix, tableId = null,
-        noun = "categories", rank = true
+        noun = "categories", rank = true, drilldown = null
     } = {}) {
         const select = byId(`${selector}-series`);
         const list = byId(`${prefix}-chart`);
@@ -191,7 +255,15 @@
                 bar.className = "share-bar";
                 bar.style.width = `${entry.share * 100}%`;
                 track.append(bar);
-                row.append(name, value, track);
+                if (drilldown && entry.lectures > 0) {
+                    const [key, getValue] = drilldown;
+                    const filters = { [key]: getValue(entry) };
+                    if (select.value !== "all") filters.series = summary.seriesId;
+                    const description = `${label(entry)} · ${select.selectedOptions[0].textContent}`;
+                    row.append(exploreButton(label(entry), description, filters, entry.lectures, "share-label"), value, track);
+                } else {
+                    row.append(name, value, track);
+                }
                 rows.append(row);
             }
             list.replaceChildren(rows);
@@ -212,13 +284,16 @@
             const data = await response.json();
             // Independent chart failures must not suppress other visualizations.
             const tasks = [
+                () => linkAnnualChart("delivery", data.lecturesPerYear),
+                () => linkAnnualChart("audience", data.audiencePerYear),
+                () => linkGenderTable(data.genderPerYear),
                 () => speakerChart(data.speakerAnalysis?.lecturesPerSpeakerDistribution),
                 () => genderChart(data.genderPerYear),
-                () => shareChart("institution", data.institutionTypeAnalysis, "types", e => institutionLabels.get(e.type), { tableId: "institution-type-table" }),
-                () => shareChart("discipline", data.disciplineAnalysis, "disciplines", e => e.label || e.id, { limit: 10, tableId: "discipline-table", noun: "disciplines" }),
+                () => shareChart("institution", data.institutionTypeAnalysis, "types", e => institutionLabels.get(e.type), { tableId: "institution-type-table", drilldown: ["institution-type", e => e.type] }),
+                () => shareChart("discipline", data.disciplineAnalysis, "disciplines", e => e.label || e.id, { limit: 10, tableId: "discipline-table", noun: "disciplines", drilldown: ["discipline", e => e.id] }),
                 () => shareChart("geography", data.geographicalAnalysis, "connections", e => geographyLabels.get(e.type), { tableId: "geography-table", rank: false }),
                 () => shareChart("topic-area", data.topicAnalysis, "topicAreas", e => e.label, { selector: "topic", tableId: "topic-area-table", rank: false }),
-                () => shareChart("topic-top", data.topicAnalysis, "topics", e => e.topic, { selector: "topic", limit: 10, noun: "topics" })
+                () => shareChart("topic-top", data.topicAnalysis, "topics", e => e.topic, { selector: "topic", limit: 10, noun: "topics", drilldown: ["topic", e => e.topic] })
             ];
             for (const task of tasks) {
                 try { task(); } catch (error) { console.error("Unable to render chart.", error); }
