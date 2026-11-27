@@ -310,9 +310,7 @@
 
     async function init() {
         try {
-            const response = await fetch("./data/analyses.json");
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
+            const data = await window.lectureData.loadAnalyses();
             // Independent chart failures must not suppress other visualizations.
             const tasks = [
                 () => linkAnnualChart("delivery", data.lecturesPerYear),

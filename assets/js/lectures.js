@@ -159,14 +159,9 @@
             .map(normalize).filter(Boolean).join("\n");
     }
 
-    function populateFilters() {
+    function populateFilters(optionMaps) {
         for (const filter of filters) {
-            const options = new Map();
-            for (const record of records) {
-                for (const item of filter.options(record)) {
-                    if (item.value) options.set(item.value, item.label);
-                }
-            }
+            const options = optionMaps.get(filter.key);
             const fragment = document.createDocumentFragment();
             fragment.append(new Option("Any", ""));
             // Distinguish homonymous entities without merging their IDs.
@@ -231,10 +226,13 @@
             if (invalidRange) control.setAttribute("aria-describedby", "lecture-filter-error");
             else control.removeAttribute("aria-describedby");
         }
+        // Read control values once per query, not for every lecture record.
+        const selected = active.map(filter => ({ filter, value: filter.control.value }));
         matches = invalidRange ? [] : searchIndex.filter(entry =>
-            terms.every(term => entry.text.includes(term)) && active.every(filter =>
-                filter.matches ? filter.matches(entry.record, filter.control.value) :
-                    entry.filters[filter.key].has(filter.control.value)))
+            selected.every(({ filter, value }) =>
+                filter.matches ? filter.matches(entry.record, value) :
+                    entry.filters[filter.key].has(value)) &&
+            terms.every(term => entry.text.includes(term)))
             .map(entry => entry.record);
         page = 0;
         clear.disabled = search.value === "";
@@ -504,18 +502,24 @@
             // Keep the deterministic order supplied by build.py (date, then ID).
             records = data.lectures;
             try {
-                const analysisResponse = await fetch("./data/analyses.json");
-                if (!analysisResponse.ok) throw new Error(`HTTP ${analysisResponse.status}`);
-                loadDerivedMembership(await analysisResponse.json(), data);
+                loadDerivedMembership(await window.lectureData.loadAnalyses(), data);
             } catch (error) {
                 // Keep the ordinary explorer usable if the analysis export is missing or outdated.
                 console.error("Unable to load derived filters.", error);
                 byId("lecture-derived-warning").hidden = false;
             }
+            // Build the search index and filter option catalog in one pass.
+            const optionMaps = new Map(filters.map(filter => [filter.key, new Map()]));
             searchIndex = records.map(record => ({ record, text: searchableText(record),
-                filters: Object.fromEntries(filters.map(filter => [filter.key,
-                    new Set(filter.options(record).map(item => item.value))])) }));
-            populateFilters();
+                filters: Object.fromEntries(filters.map(filter => {
+                    const items = filter.options(record);
+                    const catalog = optionMaps.get(filter.key);
+                    for (const item of items) {
+                        if (item.value) catalog.set(item.value, item.label);
+                    }
+                    return [filter.key, new Set(items.map(item => item.value))];
+                })) }));
+            populateFilters(optionMaps);
             search.value = "";
             search.disabled = false;
             searchPanel.hidden = false;
