@@ -176,3 +176,15 @@ main > section[data-analysis-view="topics"] select {
 .lecture-pagination button, #lecture-retry { font: inherit; min-height: 44px; padding: .4rem .85rem; color: var(--accent); background: var(--background); border: 1px solid var(--muted); border-radius: 4px; cursor: pointer; }
 .lecture-pagination button:disabled { color: var(--muted); background: var(--surface); cursor: default; }
 .lecture-pagination button:not(:disabled):hover, #lecture-retry:hover { background: var(--surface); }
+
+
+/* Lecture explorer: full-text search. */
+.lecture-search-panel { margin: .75rem 0 1rem; }
+.lecture-search-panel[hidden] { display: none; }
+.lecture-search-panel label { display: block; font-weight: 600; margin-bottom: .25rem; }
+.lecture-search-controls { display: flex; flex-wrap: wrap; gap: .5rem; max-width: 48rem; }
+.lecture-search-controls input { flex: 1 1 15rem; min-width: 0; width: 100%; min-height: 44px; font: inherit; padding: .4rem .65rem; border: 1px solid var(--muted); border-radius: 4px; color: var(--text); background: var(--background); }
+.lecture-search-controls button { min-height: 44px; font: inherit; padding: .4rem .85rem; color: var(--accent); background: var(--background); border: 1px solid var(--muted); border-radius: 4px; cursor: pointer; }
+.lecture-search-controls button:disabled { color: var(--muted); background: var(--surface); cursor: default; }
+.lecture-search-controls button:not(:disabled):hover { background: var(--surface); }
+.lecture-search-panel .analysis-note { margin: .35rem 0 0; }

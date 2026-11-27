@@ -463,6 +463,14 @@
       </section>
       <section data-analysis-view="lectures" aria-labelledby="lectures-heading">
         <h2 id="lectures-heading">Lectures</h2>
+        <div id="lecture-search-panel" class="lecture-search-panel" role="search" aria-label="Search lecture records" hidden>
+          <label for="lecture-search">Search lectures</label>
+          <div class="lecture-search-controls">
+            <input id="lecture-search" type="search" placeholder="Title, speaker, abstract, topic…" aria-describedby="lecture-search-note" disabled>
+            <button type="button" id="lecture-search-clear" disabled>Clear</button>
+          </div>
+          <p id="lecture-search-note" class="analysis-note">Search all lecture records. All search terms must occur in the title, available abstracts or indexed metadata.</p>
+        </div>
         <div class="lecture-results-head">
           <p id="lecture-results-status" role="status" aria-atomic="true" tabindex="-1">Open this view to load lecture records.</p>
           <span class="analysis-note">Newest first by recorded date</span>
