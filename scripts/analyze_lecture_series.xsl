@@ -474,6 +474,7 @@
     <xsl:variable name="categories" as="xs:string*"
       select="distinct-values($cities ! local:geo-category(., $host-ids))"/>
     <xsl:sequence select="map {
+      'lectureId': string($lecture/@xml:id),
       'seriesId': string($series/@xml:id),
       'categories': $categories,
       'withoutHostCity': empty($hosts),
@@ -494,11 +495,26 @@
     <xsl:variable name="total" select="count($records)"/>
     <xsl:sequence select="map {
       'total': $total,
+      'selectionGroups': array {
+        map { 'id': 'withoutHostCity', 'label': 'No resolved host city', 'lectures': count($records[?withoutHostCity]),
+          'lectureIds': array { $records[?withoutHostCity]?lectureId } },
+        map { 'id': 'withoutAffiliationId', 'label': 'No affiliation ID', 'lectures': count($records[?withoutAffiliationId]),
+          'lectureIds': array { $records[?withoutAffiliationId]?lectureId } },
+        map { 'id': 'unresolvedAffiliation', 'label': 'Unresolved affiliation ID', 'lectures': count($records[?unresolvedAffiliation]),
+          'lectureIds': array { $records[?unresolvedAffiliation]?lectureId } },
+        map { 'id': 'incompleteAffiliationGeography', 'label': 'Incomplete affiliation geography', 'lectures': count($records[?incompleteAffiliationGeography]),
+          'lectureIds': array { $records[?incompleteAffiliationGeography]?lectureId } },
+        map { 'id': 'withoutKnownConnection', 'label': 'No known connection', 'lectures': count($records[?withoutKnownConnection]),
+          'lectureIds': array { $records[?withoutKnownConnection]?lectureId } },
+        map { 'id': 'multipleConnectionTypes', 'label': 'Multiple connection types', 'lectures': count($records[?multipleConnectionTypes]),
+          'lectureIds': array { $records[?multipleConnectionTypes]?lectureId } }
+      },
       'connections': array {
         for $category in $geo-categories
         return map {
           'type': $category,
           'lectures': count($records[?categories = $category]),
+          'lectureIds': array { $records[?categories = $category]?lectureId },
           'share': if ($total gt 0) then count($records[?categories = $category]) div $total else ()
         }
       },
@@ -555,6 +571,7 @@
           ')([^\p{L}\p{N}]|$)')))
         then $area?id else ()"/>
     <xsl:sequence select="map {
+      'lectureId': string($lecture/@xml:id),
       'seriesId': string($lecture/ancestor::event[@type='lecture-series'][1]/@xml:id),
       'topics': $topics,
       'areas': $areas
@@ -578,6 +595,14 @@
     </xsl:variable>
     <xsl:sequence select="map {
       'total': $total,
+      'selectionGroups': array {
+        map { 'id': 'withoutTopics', 'label': 'No recorded topics', 'lectures': count($records[empty(?topics)]),
+          'lectureIds': array { $records[empty(?topics)]?lectureId } },
+        map { 'id': 'withoutTopicArea', 'label': 'No matching topic area', 'lectures': count($records[empty(?areas)]),
+          'lectureIds': array { $records[empty(?areas)]?lectureId } },
+        map { 'id': 'multipleTopicAreas', 'label': 'Multiple matching topic areas', 'lectures': count($records[count(?areas) gt 1]),
+          'lectureIds': array { $records[count(?areas) gt 1]?lectureId } }
+      },
       'withTopics': count($records[exists(?topics)]),
       'withoutTopics': count($records[empty(?topics)]),
       'distinctTopics': count($keywords),
@@ -591,6 +616,7 @@
           'id': $area?id,
           'label': $area?label,
           'lectures': count($records[?areas = $area?id]),
+          'lectureIds': array { $records[?areas = $area?id]?lectureId },
           'share': if ($total gt 0) then count($records[?areas = $area?id]) div $total else ()
         }
       }

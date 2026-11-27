@@ -368,6 +368,7 @@
           <p class="chart-scale">Share of all lecture records in the selected scope · scale: 0–100%</p>
           <div class="share-axis" aria-hidden="true"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
           <ul id="geography-chart" class="share-bars" aria-label="Geographical connections: lecture records and shares"></ul>
+          <p class="analysis-note">Select an underlined category to explore its lecture records.</p>
           <p id="geography-chart-message" class="analysis-note" role="status"></p>
         </div>
         <details class="chart-data" open>
@@ -418,6 +419,7 @@
               <p class="chart-scale">Share of all lecture records in the selected scope · scale: 0–100%</p>
               <div class="share-axis" aria-hidden="true"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
               <ul id="topic-area-chart" class="share-bars" aria-label="Heuristic topic areas: lecture records and shares"></ul>
+          <p class="analysis-note">Select an underlined category to explore its lecture records.</p>
               <p id="topic-area-chart-message" class="analysis-note" role="status"></p>
             </div>
             <details class="chart-data" open>
@@ -499,6 +501,10 @@
                 <select id="lecture-filter-host-country" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-affiliation-country">Affiliation country</label>
                 <select id="lecture-filter-affiliation-country" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-geo-connection">Geographical connection</label>
+                <select id="lecture-filter-geo-connection" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-geo-quality">Geographical data quality</label>
+                <select id="lecture-filter-geo-quality" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-delivery">Lecture delivery</label>
                 <select id="lecture-filter-delivery" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-audience">Audience participation</label>
@@ -507,9 +513,14 @@
                 <select id="lecture-filter-discipline" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-topic">LLM-generated topic</label>
                 <select id="lecture-filter-topic" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-topic-area">Heuristic topic area</label>
+                <select id="lecture-filter-topic-area" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-topic-quality">Topic annotation coverage</label>
+                <select id="lecture-filter-topic-quality" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-abstract">Abstract availability</label>
                 <select id="lecture-filter-abstract" disabled><option value="">Any</option></select></div>
           </div>
+          <p id="lecture-derived-warning" class="analysis-note" role="status" hidden>Derived analysis filters are unavailable. Regenerate both JSON files from the same source.</p>
           <p id="lecture-filter-error" class="analysis-note" role="alert" hidden>From year must not be later than to year.</p>
           <button type="button" id="lecture-filters-reset" disabled>Reset filters</button>
         </details>

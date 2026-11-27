@@ -30,6 +30,14 @@
     const values = items => (items ?? []).filter(Boolean).map(value => option(value));
     const years = record => record.year && /^\d{4}$/.test(record.year) ? [option(record.year)] : [];
     const genderLabels = { female: "Female", male: "Male", "non-binary": "Non-binary" };
+    const derivedFields = [
+        ["geo-connection", "geographicalAnalysis", "connections", "type"],
+        ["geo-quality", "geographicalAnalysis", "selectionGroups", "id"],
+        ["topic-area", "topicAnalysis", "topicAreas", "id"],
+        ["topic-quality", "topicAnalysis", "selectionGroups", "id"]
+    ];
+    const derivedMembership = new Map();
+    const derivedOptions = (record, key) => derivedMembership.get(key)?.get(record.id) ?? [];
     const filters = [
         { key: "from", options: years, matches: (record, value) => years(record).length > 0 && record.year >= value },
         { key: "to", options: years, matches: (record, value) => years(record).length > 0 && record.year <= value },
@@ -45,7 +53,8 @@
         { key: "audience", options: record => values(record.audienceFormats) },
         { key: "discipline", options: record => entities(record.disciplineDetails, true) },
         { key: "topic", options: record => values(record.topics) },
-        { key: "abstract", options: record => [option(record.hasAbstract ? "available" : "unavailable", record.hasAbstract ? "Available" : "Not available")] }
+        { key: "abstract", options: record => [option(record.hasAbstract ? "available" : "unavailable", record.hasAbstract ? "Available" : "Not available")] },
+        ...derivedFields.map(([key]) => ({ key, options: record => derivedOptions(record, key) }))
     ].map(filter => ({ ...filter, control: byId(`lecture-filter-${filter.key}`) }));
 
     let records = [];
@@ -69,10 +78,15 @@
         }));
         const valid = selected.every(({ filter, value }) => filter &&
             [...filter.control.options].some(item => item.value === value));
-        const count = valid ? searchIndex.filter(entry => selected.every(({ filter, value }) =>
-            filter.matches ? filter.matches(entry.record, value) : entry.filters[filter.key].has(value))).length : -1;
+        const matched = valid ? searchIndex.filter(entry => selected.every(({ filter, value }) =>
+            filter.matches ? filter.matches(entry.record, value) : entry.filters[filter.key].has(value))) : [];
+        const count = valid ? matched.length : -1;
+        const requiresIds = entries.some(([key]) => derivedFields.some(([derived]) => key === derived));
+        const expectedIds = Array.isArray(selection.lectureIds) ? new Set(selection.lectureIds) : null;
+        const sameIds = !requiresIds || (expectedIds && expectedIds.size === selection.expected &&
+            selection.lectureIds.length === expectedIds.size && matched.every(entry => expectedIds.has(entry.record.id)));
         selectionNote.hidden = false;
-        if (!valid || count !== selection.expected) {
+        if (!valid || count !== selection.expected || !sameIds) {
             selectionNote.textContent = "The selected analysis could not be matched to the lecture export. Previous filters have been retained. Regenerate both JSON files from the same source.";
             return;
         }
@@ -162,7 +176,7 @@
                 fragment.append(new Option(labelCounts.get(label) > 1 ? `${label} (${value})` : label, value));
             }
             filter.control.replaceChildren(fragment);
-            filter.control.disabled = false;
+            filter.control.disabled = derivedFields.some(([key]) => key === filter.key) && !derivedMembership.has(filter.key);
         }
         filterPanel.hidden = false;
     }
@@ -384,6 +398,57 @@
         detailTrigger = null;
     });
 
+    function loadDerivedMembership(analysis, data) {
+        if (analysis.datasetVersion !== data.version || analysis.counts?.lectures !== records.length) {
+            throw new Error("Analysis and lecture exports differ in version or record count.");
+        }
+        const byRecord = new Map(records.map(record => [record.id, record]));
+        const seriesCounts = new Map();
+        for (const record of records) seriesCounts.set(record.seriesId, (seriesCounts.get(record.seriesId) ?? 0) + 1);
+        const result = new Map();
+        for (const [key, analysisKey, field, idField] of derivedFields) {
+            const source = analysis[analysisKey];
+            const groups = source?.overall?.[field];
+            if (!Array.isArray(groups) || source.overall.total !== records.length || !Array.isArray(source.perSeries)) {
+                throw new Error(`Missing ${key} membership. Regenerate analyses.json.`);
+            }
+            const validateGroup = group => {
+                if (typeof group[idField] !== "string" || !Array.isArray(group.lectureIds) ||
+                    group.lectureIds.length !== group.lectures || new Set(group.lectureIds).size !== group.lectures ||
+                    !group.lectureIds.every(id => byRecord.has(id))) throw new Error(`Invalid ${key} membership.`);
+            };
+            const membership = new Map();
+            const byGroup = new Map();
+            for (const group of groups) {
+                validateGroup(group);
+                if (byGroup.has(group[idField])) throw new Error(`Duplicate ${key} group.`);
+                byGroup.set(group[idField], group);
+                const label = group.label ?? ({ local: "Local", national: "National", European: "European", "other continents": "Other continents" }[group[idField]] ?? group[idField]);
+                for (const id of group.lectureIds) {
+                    if (!membership.has(id)) membership.set(id, []);
+                    membership.get(id).push(option(group[idField], label));
+                }
+            }
+            const seen = new Set();
+            for (const summary of source.perSeries) {
+                if (seen.has(summary.seriesId) || summary.total !== (seriesCounts.get(summary.seriesId) ?? 0) ||
+                    !Array.isArray(summary[field]) || summary[field].length !== groups.length ||
+                    new Set(summary[field].map(group => group[idField])).size !== groups.length) throw new Error(`Invalid ${key} series summary.`);
+                seen.add(summary.seriesId);
+                for (const group of summary[field]) {
+                    validateGroup(group);
+                    const overall = byGroup.get(group[idField]);
+                    if (!overall) throw new Error(`Unknown ${key} group.`);
+                    const expected = new Set(overall.lectureIds.filter(id => byRecord.get(id).seriesId === summary.seriesId));
+                    if (expected.size !== group.lectures || !group.lectureIds.every(id => expected.has(id))) throw new Error(`Inconsistent ${key} series membership.`);
+                }
+            }
+            if (![...seriesCounts.keys()].every(id => seen.has(id))) throw new Error(`Missing ${key} series summary.`);
+            result.set(key, membership);
+        }
+        for (const [key, membership] of result) derivedMembership.set(key, membership);
+    }
+
     async function loadLectures() {
         if (loaded || loading) return;
         loading = true;
@@ -397,6 +462,15 @@
             if (!validDataset(data)) throw new Error("Invalid lecture data or unsupported schema. Regenerate lectures.json.");
             // Keep the deterministic order supplied by build.py (date, then ID).
             records = data.lectures;
+            try {
+                const analysisResponse = await fetch("./data/analyses.json");
+                if (!analysisResponse.ok) throw new Error(`HTTP ${analysisResponse.status}`);
+                loadDerivedMembership(await analysisResponse.json(), data);
+            } catch (error) {
+                // Keep the ordinary explorer usable if the analysis export is missing or outdated.
+                console.error("Unable to load derived filters.", error);
+                byId("lecture-derived-warning").hidden = false;
+            }
             searchIndex = records.map(record => ({ record, text: searchableText(record),
                 filters: Object.fromEntries(filters.map(filter => [filter.key,
                     new Set(filter.options(record).map(item => item.value))])) }));

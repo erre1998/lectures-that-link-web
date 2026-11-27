@@ -148,14 +148,14 @@
 
     // Real buttons keep drill-down links keyboard accessible. A count check in
     // lectures.js guards against mismatched analysis and lecture exports.
-    function exploreButton(text, label, filters, expected, className = "") {
+    function exploreButton(text, label, filters, expected, className = "", lectureIds = undefined) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = `analysis-explore ${className}`;
         button.textContent = text;
         button.setAttribute("aria-label", `Explore ${label}: ${number.format(expected)} lecture records`);
         button.addEventListener("click", () => document.dispatchEvent(new CustomEvent("lecture:explore", {
-            detail: { label, filters, expected }
+            detail: { label, filters, expected, lectureIds }
         })));
         return button;
     }
@@ -260,7 +260,7 @@
                     const filters = { [key]: getValue(entry) };
                     if (select.value !== "all") filters.series = summary.seriesId;
                     const description = `${label(entry)} · ${select.selectedOptions[0].textContent}`;
-                    row.append(exploreButton(label(entry), description, filters, entry.lectures, "share-label"), value, track);
+                    row.append(exploreButton(label(entry), description, filters, entry.lectures, "share-label", entry.lectureIds), value, track);
                 } else {
                     row.append(name, value, track);
                 }
@@ -277,6 +277,37 @@
         if (tableId) byId(tableId).closest("details").open = false;
     }
 
+    function linkQualityGroups(prefix, analysis, key, ids) {
+        const select = byId(`${prefix}-series`);
+        const summaries = new Map([["all", analysis.overall],
+            ...analysis.perSeries.map(e => [`series:${e.seriesId}`, e])]);
+        function render() {
+            const summary = summaries.get(select.value);
+            if (!summary) return;
+            for (const group of summary.selectionGroups ?? []) {
+                const node = byId(ids[group.id]);
+                if (!node || node.querySelector("button") || group.lectures < 1 ||
+                    !Array.isArray(group.lectureIds) || node.textContent.trim() !== number.format(group.lectures)) continue;
+                const filters = { [key]: group.id };
+                if (select.value !== "all") filters.series = summary.seriesId;
+                const description = `${group.label} · ${select.selectedOptions[0].textContent}`;
+                node.replaceChildren(exploreButton(number.format(group.lectures), description, filters,
+                    group.lectures, "", group.lectureIds));
+            }
+        }
+        const observer = new MutationObserver(render);
+        for (const id of Object.values(ids)) observer.observe(byId(id), { childList: true, characterData: true, subtree: true });
+        select.addEventListener("change", () => {
+            // Remove stale buttons before the observer links the newly rendered counts.
+            for (const id of Object.values(ids)) {
+                const node = byId(id);
+                if (node.querySelector("button")) node.textContent = node.textContent;
+            }
+            render();
+        });
+        render();
+    }
+
     async function init() {
         try {
             const response = await fetch("./data/analyses.json");
@@ -291,8 +322,14 @@
                 () => genderChart(data.genderPerYear),
                 () => shareChart("institution", data.institutionTypeAnalysis, "types", e => institutionLabels.get(e.type), { tableId: "institution-type-table", drilldown: ["institution-type", e => e.type] }),
                 () => shareChart("discipline", data.disciplineAnalysis, "disciplines", e => e.label || e.id, { limit: 10, tableId: "discipline-table", noun: "disciplines", drilldown: ["discipline", e => e.id] }),
-                () => shareChart("geography", data.geographicalAnalysis, "connections", e => geographyLabels.get(e.type), { tableId: "geography-table", rank: false }),
-                () => shareChart("topic-area", data.topicAnalysis, "topicAreas", e => e.label, { selector: "topic", tableId: "topic-area-table", rank: false }),
+                () => shareChart("geography", data.geographicalAnalysis, "connections", e => geographyLabels.get(e.type), { tableId: "geography-table", rank: false, drilldown: ["geo-connection", e => e.type] }),
+                () => shareChart("topic-area", data.topicAnalysis, "topicAreas", e => e.label, { selector: "topic", tableId: "topic-area-table", rank: false, drilldown: ["topic-area", e => e.id] }),
+                () => linkQualityGroups("geography", data.geographicalAnalysis, "geo-quality", {
+                    withoutHostCity: "geography-no-host", withoutAffiliationId: "geography-no-id",
+                    unresolvedAffiliation: "geography-unresolved", incompleteAffiliationGeography: "geography-incomplete",
+                    withoutKnownConnection: "geography-no-known", multipleConnectionTypes: "geography-multiple" }),
+                () => linkQualityGroups("topic", data.topicAnalysis, "topic-quality", {
+                    withoutTopics: "topic-without", withoutTopicArea: "topic-no-area", multipleTopicAreas: "topic-multiple" }),
                 () => shareChart("topic-top", data.topicAnalysis, "topics", e => e.topic, { selector: "topic", limit: 10, noun: "topics", drilldown: ["topic", e => e.topic] })
             ];
             for (const task of tasks) {
