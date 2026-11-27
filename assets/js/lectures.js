@@ -227,6 +227,10 @@
         byId("lecture-filter-error").hidden = !invalidRange;
         from.setAttribute("aria-invalid", String(invalidRange));
         to.setAttribute("aria-invalid", String(invalidRange));
+        for (const control of [from, to]) {
+            if (invalidRange) control.setAttribute("aria-describedby", "lecture-filter-error");
+            else control.removeAttribute("aria-describedby");
+        }
         matches = invalidRange ? [] : searchIndex.filter(entry =>
             terms.every(term => entry.text.includes(term)) && active.every(filter =>
                 filter.matches ? filter.matches(entry.record, filter.control.value) :

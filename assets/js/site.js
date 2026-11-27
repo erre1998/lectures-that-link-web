@@ -68,3 +68,9 @@ function setupAnalysisViews() {
 }
 
 setupAnalysisViews();
+
+// Keep keyboard focus in the topic explorer when pagination reaches an edge.
+document.addEventListener("click", event => {
+    const button = event.target.closest("#topic-prev, #topic-next");
+    if (button?.disabled) document.getElementById("topic-results")?.focus();
+});

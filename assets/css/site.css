@@ -288,3 +288,27 @@ body { padding-block: 1.25rem; }
 .lecture-results th:last-child, .lecture-results td:last-child { min-width: 8rem; overflow-wrap: normal; }
 .lecture-results th:nth-child(3), .lecture-results td:nth-child(3) { min-width: 8rem; }
 .lecture-results th:nth-child(4), .lecture-results td:nth-child(4) { min-width: 10rem; }
+
+/* Accessibility refinement: generous controls and visible focus. */
+.analysis-explore { min-inline-size: 24px; min-block-size: 24px; }
+#topic-search, #topic-prev, #topic-next {
+    font: inherit; min-height: 44px; max-width: 100%;
+    color: var(--text); background: var(--background);
+    border: 1px solid var(--muted); border-radius: 4px;
+    padding: .4rem .65rem;
+}
+#topic-search { width: min(100%, 24rem); }
+#topic-prev, #topic-next { color: var(--accent); cursor: pointer; }
+#topic-prev:disabled, #topic-next:disabled { color: var(--muted); background: var(--surface); cursor: default; }
+.gender-controls input, #discipline-show-zero {
+    inline-size: 24px; block-size: 24px; flex: none;
+    accent-color: var(--accent);
+}
+label:has(> #discipline-show-zero) {
+    display: flex; align-items: center; gap: .5rem; min-height: 44px;
+}
+/* Provide a visible indicator in both normal and forced-colour modes. */
+@media (forced-colors: active) {
+    :focus-visible { outline-color: Highlight; }
+    .analysis-views button[aria-pressed="true"] { border: 2px solid Highlight; text-decoration: underline; }
+}
