@@ -471,6 +471,42 @@
           </div>
           <p id="lecture-search-note" class="analysis-note">Search all lecture records. All search terms must occur in the title, available abstracts or indexed metadata.</p>
         </div>
+        <details id="lecture-filters" class="lecture-filters" hidden>
+          <summary>Filters <span id="lecture-filter-count"></span></summary>
+          <p class="analysis-note">All selected filters must match the same lecture record, not necessarily the same speaker. Countries and disciplines use resolved register entries; no missing values are inferred. Topics use the recorded LLM annotations.</p>
+          <div class="lecture-filter-grid">
+              <div><label for="lecture-filter-from">From year</label>
+                <select id="lecture-filter-from" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-to">To year</label>
+                <select id="lecture-filter-to" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-series">Lecture series</label>
+                <select id="lecture-filter-series" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-speaker">Speaker</label>
+                <select id="lecture-filter-speaker" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-gender">Recorded speaker gender</label>
+                <select id="lecture-filter-gender" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-affiliation">Affiliation institution</label>
+                <select id="lecture-filter-affiliation" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-institution-type">Affiliation institution type</label>
+                <select id="lecture-filter-institution-type" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-host-country">Host country</label>
+                <select id="lecture-filter-host-country" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-affiliation-country">Affiliation country</label>
+                <select id="lecture-filter-affiliation-country" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-delivery">Lecture delivery</label>
+                <select id="lecture-filter-delivery" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-audience">Audience participation</label>
+                <select id="lecture-filter-audience" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-discipline">Annotated discipline</label>
+                <select id="lecture-filter-discipline" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-topic">LLM-generated topic</label>
+                <select id="lecture-filter-topic" disabled><option value="">Any</option></select></div>
+              <div><label for="lecture-filter-abstract">Abstract availability</label>
+                <select id="lecture-filter-abstract" disabled><option value="">Any</option></select></div>
+          </div>
+          <p id="lecture-filter-error" class="analysis-note" role="alert" hidden>From year must not be later than to year.</p>
+          <button type="button" id="lecture-filters-reset" disabled>Reset filters</button>
+        </details>
         <div class="lecture-results-head">
           <p id="lecture-results-status" role="status" aria-atomic="true" tabindex="-1">Open this view to load lecture records.</p>
           <span class="analysis-note">Newest first by recorded date</span>
@@ -496,6 +532,13 @@
           <button type="button" id="lecture-next" disabled>Next</button>
         </div>
         <p id="lecture-list-note" class="analysis-note">Canceled records are included and marked. Dates retain their recorded precision. Unresolved speaker IDs are explicitly identified.</p>
+        <dialog id="lecture-detail" class="lecture-detail" aria-labelledby="lecture-detail-heading">
+          <div class="lecture-detail-header">
+            <h2 id="lecture-detail-heading">Lecture details</h2>
+            <form method="dialog"><button type="submit" autofocus>Close</button></form>
+          </div>
+          <div id="lecture-detail-content"></div>
+        </dialog>
         <noscript><p>JavaScript is required to load individual lecture records.</p></noscript>
       </section>
     </main>
