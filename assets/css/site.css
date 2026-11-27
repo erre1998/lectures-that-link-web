@@ -231,3 +231,60 @@ main > section[data-analysis-view="topics"] select {
 .analysis-explore:hover { text-decoration-thickness: 2px; }
 #lecture-analysis-selection { border-inline-start: 3px solid var(--accent); padding-inline-start: .75rem; }
 #lecture-analysis-selection[hidden] { display: none; }
+
+
+/* UI refinement: institutional identity, grouped overview and filter summary. */
+body { padding-block: 1.25rem; }
+.site-header { padding-bottom: .65rem; }
+.site-header-top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem 2rem; }
+.site-header-top h1, .site-header-top .site-title { margin: 0; font-size: clamp(1.65rem, 3vw, 2rem); }
+.header-institutions { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.5rem; max-width: 100%; }
+.header-institutions a { display: flex; align-items: center; max-width: 100%; }
+.header-institutions img { display: block; height: auto; max-width: 100%; }
+.header-university img { width: 312px; }
+.header-rosdh img { width: 170px; }
+.site-nav { margin-top: .7rem; }
+.site-nav a { display: inline-flex; align-items: center; min-height: 44px; }
+#dataset-version { margin: .15rem 0 0; }
+.skip-link { position: absolute; inset-inline-start: 1rem; top: .5rem; z-index: 10; padding: .65rem 1rem; background: var(--background); border: 2px solid var(--accent); }
+.skip-link:not(:focus) { clip-path: inset(50%); width: 1px; height: 1px; overflow: hidden; padding: 0; border: 0; }
+.site-footer { margin-top: 2rem; padding-top: .8rem; }
+.footer-content { display: block; }
+.footer-information p { margin: .25rem 0; }
+.footer-update { font-size: .825rem; }
+.overview-group { margin-block: .9rem 1.25rem; }
+.overview-group h3 { font-size: 1rem; margin: 0 0 .4rem; }
+.overview-group .statistics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: .65rem; margin: 0; }
+.overview-group .statistics > div { padding: .75rem 1rem; }
+.overview-group .statistics dt { font-size: .9rem; }
+.overview-group .statistics dd { font-size: 1.8rem; color: var(--accent); }
+.analysis-views button { border-color: var(--muted); }
+.analysis-views button[aria-pressed="true"] { text-decoration: underline; text-underline-offset: .2em; }
+.lecture-search-controls { max-width: 100%; }
+.lecture-filter-group { border: 0; margin: 0 0 1rem; padding: 0; min-width: 0; }
+.lecture-filter-group legend { font-weight: 650; margin-bottom: .45rem; padding: 0; }
+.lecture-active-filters { display: flex; flex-wrap: wrap; gap: .4rem .75rem; align-items: center; margin: .65rem 0 1rem; }
+.lecture-active-filters[hidden] { display: none; }
+#lecture-active-heading { width: 100%; font-size: .9rem; font-weight: 600; margin: 0; }
+#lecture-filter-chips { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; padding: 0; margin: 0; min-width: 0; max-width: 100%; }
+#lecture-filter-chips li { min-width: 0; max-width: 100%; }
+#lecture-filter-chips button, #lecture-clear-active { font: inherit; font-size: .875rem; min-height: 44px; max-width: 100%; padding: .4rem .65rem; border: 1px solid var(--muted); border-radius: 4px; background: var(--surface); color: var(--text); cursor: pointer; overflow-wrap: anywhere; text-align: start; }
+#lecture-filter-chips button:hover, #lecture-clear-active:hover { background: var(--background); text-decoration: underline; }
+#lecture-clear-active { color: var(--accent); background: var(--background); }
+.lecture-detail-header { padding-bottom: .65rem; border-bottom: 1px solid var(--border); }
+.lecture-detail-content h3, #lecture-detail-content h3 { font-size: 1.1rem; margin-top: 1.3rem; }
+.lecture-detail-metadata { padding-block: .65rem; border-block: 1px solid var(--border); }
+#lecture-detail-content p { line-height: 1.7; }
+@media (max-width: 600px) {
+    body { padding: .9rem 1rem; }
+    .site-header-top { gap: .8rem; }
+    .header-institutions { gap: .6rem 1rem; }
+    .header-university img { width: min(260px, 100%); }
+    .header-rosdh img { width: min(142px, 100%); }
+    .overview-group .statistics { grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr)); }
+    .lecture-detail { width: calc(100% - 1rem); }
+}
+/* Keep short column headings and abstract status values legible. */
+.lecture-results th:last-child, .lecture-results td:last-child { min-width: 8rem; overflow-wrap: normal; }
+.lecture-results th:nth-child(3), .lecture-results td:nth-child(3) { min-width: 8rem; }
+.lecture-results th:nth-child(4), .lecture-results td:nth-child(4) { min-width: 10rem; }

@@ -9,15 +9,22 @@
     <script src="assets/js/site.js" defer></script>
   </head>
   <body>
-    <header>
-      <p class="site-title">Lectures that Link</p>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+      <div class="site-header-top">
+        <p class="site-title">Lectures that Link</p>
+      <div class="header-institutions" role="group" aria-label="Institutional affiliations">
+        <a href="https://www.uni-rostock.de/en/" class="header-university"><img src="assets/imgs/university-of-rostock.svg" alt="University of Rostock" width="2048" height="420"></a>
+        <a href="https://www.germanistik.uni-rostock.de/en/forschung/digital-humanities/rosdh/" class="header-rosdh"><img src="assets/imgs/rosdh.svg" alt="RosDH – Rostock Working Group Digital Humanities" width="866" height="287"></a>
+      </div>
+      </div>
       <nav class="site-nav" aria-label="Main navigation">
         <a href="index.html">Explore</a>
         <a href="team.html" aria-current="page">Project team</a>
         <a href="publications.html">Publications</a>
       </nav>
     </header>
-    <main id="main-content" class="information-page">
+    <main id="main-content" tabindex="-1" class="information-page">
       <h1>Project team</h1>
       <p>Lectures that Link examines lecture series as sites of scholarly exchange in the Digital Humanities. The project is based at the Professorship for Digital Humanities at the University of Rostock and is associated with the Rostock Working Group Digital Humanities (RosDH).</p>
       <section aria-labelledby="lead-heading">

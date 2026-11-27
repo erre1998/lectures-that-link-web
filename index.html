@@ -12,8 +12,15 @@
     <script src="assets/js/lectures.js" defer></script>
   </head>
   <body>
-    <header>
-      <h1>Lectures that Link</h1>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="site-header">
+      <div class="site-header-top">
+        <h1>Lectures that Link</h1>
+      <div class="header-institutions" role="group" aria-label="Institutional affiliations">
+        <a href="https://www.uni-rostock.de/en/" class="header-university"><img src="assets/imgs/university-of-rostock.svg" alt="University of Rostock" width="2048" height="420"></a>
+        <a href="https://www.germanistik.uni-rostock.de/en/forschung/digital-humanities/rosdh/" class="header-rosdh"><img src="assets/imgs/rosdh.svg" alt="RosDH – Rostock Working Group Digital Humanities" width="866" height="287"></a>
+      </div>
+      </div>
       <nav class="site-nav" aria-label="Main navigation">
         <a href="index.html" aria-current="page">Explore</a>
         <a href="team.html">Project team</a>
@@ -21,7 +28,7 @@
       </nav>
       <p id="dataset-version">Dataset: v0.8</p>
     </header>
-    <main id="main-content">
+    <main id="main-content" tabindex="-1">
       <div id="analysis-views" class="analysis-views" role="group" aria-label="Analysis views" hidden>
         <button type="button" data-analysis-target="overview" aria-pressed="false">Overview</button>
         <button type="button" data-analysis-target="formats" aria-pressed="false">Formats</button>
@@ -35,19 +42,32 @@
       <p id="status" role="status">Loading data…</p>
       <section data-analysis-view="overview" aria-labelledby="overview-heading">
         <h2 id="overview-heading">Corpus overview</h2>
-        <dl class="statistics">
-          <div><dt>Lecture series</dt><dd id="count-series">–</dd></div>
-          <div><dt>Terms</dt><dd id="count-terms">–</dd></div>
-          <div><dt>Lecture records</dt><dd id="count-lectures">–</dd></div>
-          <div><dt>Unique speaker IDs</dt><dd id="count-speakers">–</dd></div>
-          <div><dt>Registered organizers (persons)</dt><dd id="count-organizers">–</dd></div>
-          <div><dt>Host institutions</dt><dd id="count-host-institutions">–</dd></div>
-          <div><dt>Affiliation institutions</dt><dd id="count-affiliation-institutions">–</dd></div>
-          <div><dt>Host cities</dt><dd id="count-host-cities">–</dd></div>
-          <div><dt>Host countries</dt><dd id="count-host-countries">–</dd></div>
-          <div><dt>Affiliation cities</dt><dd id="count-affiliation-cities">–</dd></div>
-          <div><dt>Affiliation countries</dt><dd id="count-affiliation-countries">–</dd></div>
-        </dl>
+        <div class="overview-group">
+          <h3>Lecture corpus</h3>
+          <dl class="statistics">
+            <div><dt>Lecture series</dt><dd id="count-series">–</dd></div>
+            <div><dt>Terms</dt><dd id="count-terms">–</dd></div>
+            <div><dt>Lecture records</dt><dd id="count-lectures">–</dd></div>
+          </dl>
+        </div>
+        <div class="overview-group">
+          <h3>People and institutions</h3>
+          <dl class="statistics">
+            <div><dt>Unique speaker IDs</dt><dd id="count-speakers">–</dd></div>
+            <div><dt>Registered organizers (persons)</dt><dd id="count-organizers">–</dd></div>
+            <div><dt>Host institutions</dt><dd id="count-host-institutions">–</dd></div>
+            <div><dt>Affiliation institutions</dt><dd id="count-affiliation-institutions">–</dd></div>
+          </dl>
+        </div>
+        <div class="overview-group">
+          <h3>Geographical coverage</h3>
+          <dl class="statistics">
+            <div><dt>Host cities</dt><dd id="count-host-cities">–</dd></div>
+            <div><dt>Host countries</dt><dd id="count-host-countries">–</dd></div>
+            <div><dt>Affiliation cities</dt><dd id="count-affiliation-cities">–</dd></div>
+            <div><dt>Affiliation countries</dt><dd id="count-affiliation-countries">–</dd></div>
+          </dl>
+        </div>
         <p class="analysis-note">Lecture records include canceled lectures. Speaker counts refer to distinct TEI IDs. Institution and geographical counts refer to resolved register entries; virtual places are excluded from city counts.</p>
       </section>
       <section data-analysis-view="formats" aria-labelledby="year-heading">
@@ -482,13 +502,20 @@
         <details id="lecture-filters" class="lecture-filters" hidden>
           <summary>Filters <span id="lecture-filter-count"></span></summary>
           <p class="analysis-note">All selected filters must match the same lecture record, not necessarily the same speaker. Countries and disciplines use resolved register entries; no missing values are inferred. Topics use the recorded LLM annotations.</p>
-          <div class="lecture-filter-grid">
+          <fieldset class="lecture-filter-group">
+            <legend>Time and lecture series</legend>
+            <div class="lecture-filter-grid">
               <div><label for="lecture-filter-from">From year</label>
                 <select id="lecture-filter-from" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-to">To year</label>
                 <select id="lecture-filter-to" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-series">Lecture series</label>
                 <select id="lecture-filter-series" disabled><option value="">Any</option></select></div>
+            </div>
+          </fieldset>
+          <fieldset class="lecture-filter-group">
+            <legend>People and institutions</legend>
+            <div class="lecture-filter-grid">
               <div><label for="lecture-filter-speaker">Speaker</label>
                 <select id="lecture-filter-speaker" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-gender">Recorded speaker gender</label>
@@ -497,6 +524,11 @@
                 <select id="lecture-filter-affiliation" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-institution-type">Affiliation institution type</label>
                 <select id="lecture-filter-institution-type" disabled><option value="">Any</option></select></div>
+            </div>
+          </fieldset>
+          <fieldset class="lecture-filter-group">
+            <legend>Geography</legend>
+            <div class="lecture-filter-grid">
               <div><label for="lecture-filter-host-country">Host country</label>
                 <select id="lecture-filter-host-country" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-affiliation-country">Affiliation country</label>
@@ -505,6 +537,11 @@
                 <select id="lecture-filter-geo-connection" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-geo-quality">Geographical data quality</label>
                 <select id="lecture-filter-geo-quality" disabled><option value="">Any</option></select></div>
+            </div>
+          </fieldset>
+          <fieldset class="lecture-filter-group">
+            <legend>Formats and content</legend>
+            <div class="lecture-filter-grid">
               <div><label for="lecture-filter-delivery">Lecture delivery</label>
                 <select id="lecture-filter-delivery" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-audience">Audience participation</label>
@@ -519,11 +556,17 @@
                 <select id="lecture-filter-topic-quality" disabled><option value="">Any</option></select></div>
               <div><label for="lecture-filter-abstract">Abstract availability</label>
                 <select id="lecture-filter-abstract" disabled><option value="">Any</option></select></div>
-          </div>
+            </div>
+          </fieldset>
           <p id="lecture-derived-warning" class="analysis-note" role="status" hidden>Derived analysis filters are unavailable. Regenerate both JSON files from the same source.</p>
           <p id="lecture-filter-error" class="analysis-note" role="alert" hidden>From year must not be later than to year.</p>
           <button type="button" id="lecture-filters-reset" disabled>Reset filters</button>
         </details>
+        <div id="lecture-active-filters" class="lecture-active-filters" hidden>
+          <p id="lecture-active-heading">Active filters</p>
+          <ul id="lecture-filter-chips" aria-labelledby="lecture-active-heading"></ul>
+          <button type="button" id="lecture-clear-active">Reset filters</button>
+        </div>
         <div class="lecture-results-head">
           <p id="lecture-results-status" role="status" aria-atomic="true" tabindex="-1">Open this view to load lecture records.</p>
           <span class="analysis-note">Newest first by recorded date</span>

@@ -93,7 +93,7 @@
         search.value = "";
         for (const filter of filters) filter.control.value = "";
         for (const { filter, value } of selected) filter.control.value = value;
-        filterPanel.open = true;
+        filterPanel.open = false;
         applySearch();
         selectionNote.hidden = false;
         selectionNote.textContent = `Analysis selection: ${selection.label} (${number.format(count)} lecture records). You can refine or reset these filters.`;
@@ -181,6 +181,42 @@
         filterPanel.hidden = false;
     }
 
+    // Present the current filters outside the expandable controls.
+    // The select elements remain the single source of truth.
+    const activePanel = byId("lecture-active-filters");
+    const chips = byId("lecture-filter-chips");
+    const clearActive = byId("lecture-clear-active");
+
+    function renderActiveFilters(active) {
+        const fragment = document.createDocumentFragment();
+        for (const filter of active) {
+            const label = filter.control.labels[0].textContent.trim();
+            const value = filter.control.selectedOptions[0].textContent;
+            const item = document.createElement("li");
+            const button = cell("button", `${label}: ${value} ×`);
+            button.type = "button";
+            button.setAttribute("aria-label", `Remove filter: ${label}: ${value}`);
+            button.addEventListener("click", () => {
+                const index = [...chips.children].indexOf(item);
+                filter.control.value = "";
+                applySearch();
+                const remaining = [...chips.querySelectorAll("button")];
+                (remaining[Math.min(index, remaining.length - 1)] ||
+                    filterPanel.querySelector("summary")).focus();
+            });
+            item.append(button);
+            fragment.append(item);
+        }
+        chips.replaceChildren(fragment);
+        activePanel.hidden = active.length === 0;
+    }
+
+    clearActive.addEventListener("click", () => {
+        for (const filter of filters) filter.control.value = "";
+        applySearch();
+        filterPanel.querySelector("summary").focus();
+    });
+
     function applySearch() {
         selectionNote.hidden = true;
         const terms = [...new Set(normalize(search.value).split(" ").filter(Boolean))];
@@ -200,6 +236,7 @@
         clear.disabled = search.value === "";
         resetFilters.disabled = active.length === 0;
         byId("lecture-filter-count").textContent = active.length ? `(${active.length} active)` : "";
+        renderActiveFilters(active);
         renderPage();
     }
 
@@ -485,6 +522,7 @@
             status.textContent = "Unable to load lecture records. Please try again or regenerate lectures.json.";
             searchPanel.hidden = true;
             filterPanel.hidden = true;
+            activePanel.hidden = true;
             search.disabled = true;
             clear.disabled = true;
             region.hidden = true;
